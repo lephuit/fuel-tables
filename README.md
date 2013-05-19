@@ -1,4 +1,3 @@
-fuel-tables
-===========
+# Fuel-tables
 
 A FuelPHP package to handle tables (with themes)
