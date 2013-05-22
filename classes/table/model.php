@@ -15,12 +15,12 @@ class Model extends Table {
         return $this;
     }
     
-    public function filter($column, $callback)
+    public function apply($column, $callback)
     {
-        if ( ! isset($this->_filter[$column]) )
-        {
+        // if ( ! isset($this->_filter[$column]) )
+        // {
             $this->_filter[$column] = $callback;
-        }
+        // }
         
         return $this;
     }
@@ -111,7 +111,7 @@ class Model extends Table {
             if ( is_numeric($column) )
             {
                 $column = false;
-                $content = $args;
+                $header = $args;
                 $attributes = array();
             }
             else
@@ -121,23 +121,23 @@ class Model extends Table {
                     if ( count($args) == 1 )
                     {
                         $keys = array_keys($args);
-                        $content = reset($keys);
-                        $filter = $args[$content];
+                        $header = reset($keys);
+                        $filter = $args[$header];
                     }
                     else
                     {
-                        $content = isset($args['title']) ? $args['title'] : '';
+                        $header = isset($args['header']) ? $args['header'] : '';
                         $attributes = isset($args['attributes']) ? $args['attributes'] : array();
                         $filter = isset($args['filter']) ? $args['filter'] : false;
                     }
                 }
                 else
                 {
-                    $content = $args;
+                    $header = $args;
                 }
             }
             
-            $prepared[$content] = $attributes;
+            $prepared[$header] = $attributes;
             $columns[]  = $column;
             $filters[$column] = $filter;
         }
@@ -146,7 +146,7 @@ class Model extends Table {
         {
             foreach ( $filters as $col => $filter )
             {
-                $filter && $this->filter($col, $filter);
+                $filter && $this->apply($col, $filter);
             }
         }
         
