@@ -101,7 +101,7 @@ abstract class Table {
     
     protected function _render_attributes($attributes = null)
     {
-        if ( ! $attributes )
+        if ( $attributes === null )
         {
             $attributes = $this->_attributes;
         }
