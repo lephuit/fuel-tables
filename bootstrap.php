@@ -16,12 +16,26 @@
 Autoloader::add_classes(array(
     'Table\\Table'  => __DIR__ . '/classes/table.php',
     
-    'Table\\Header' => __DIR__ . '/classes/table/header.php',
-    'Table\\Footer' => __DIR__ . '/classes/table/footer.php',
-    'Table\\Body'   => __DIR__ . '/classes/table/body.php',
+    // Simple tables
+    'Table\\Simple'  => __DIR__ . '/classes/table/simple.php',
     
-    'Table\\Row'    => __DIR__ . '/classes/table/row.php',
+    // Rows and groups
+    'Table\\Simple\\Row'    => __DIR__ . '/classes/table/simple/row.php',
+    'Table\\Simple\\Group'  => __DIR__ . '/classes/table/simple/group.php',
     
+    // Header group and row
+    'Table\\Simple\\Header\\Group'  => __DIR__ . '/classes/table/simple/header/group.php',
+    'Table\\Simple\\Header\\Row'    => __DIR__ . '/classes/table/simple/header/row.php',
+    
+    // Footer group and row
+    'Table\\Simple\\Footer\\Group'  => __DIR__ . '/classes/table/simple/footer/group.php',
+    'Table\\Simple\\Footer\\Row'    => __DIR__ . '/classes/table/simple/footer/row.php',
+    
+    // Body group and row
+    'Table\\Simple\\Body\\Group'    => __DIR__ . '/classes/table/simple/body/group.php',
+    'Table\\Simple\\Body\\Row'      => __DIR__ . '/classes/table/simple/body/row.php',
+    
+    // Exceptions
     'Table\\TableException' =>  __DIR__ . '/classes/exceptions.php',
 ));
 

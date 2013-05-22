@@ -2,22 +2,9 @@
 
 
 
-class Table {
+abstract class Table {
     
-    
-    protected static $instances = array();
-    
-    
-    public static function forge($name = 'default')
-    {
-        if ( ! isset(static::$instances[$name]) )
-        {
-            static::$instances[$name] = new static();
-        }
-        
-        return static::$instances[$name];
-    }
-    
+    protected static $instances;
     
     public static function instance($name = 'default')
     {
@@ -25,32 +12,68 @@ class Table {
     }
     
     
+    public static function forge($name = 'default')
+    {
+        if ( ! isset(static::$instances[$name]) )
+        {
+            static::$instances[$name] = new static($name);
+        }
+        
+        return static::$instances[$name];
+    }
     
-    protected $attributes = array();
-    
-    protected $header = null;
-    
-    protected $footer = null;
-    
-    protected $body = null;
     
     
-    public function __construct() {}
+    
+    
+    abstract public function add_row();
+    
+    
+    abstract public function set_header();
+    
+    
+    abstract public function set_footer();
+    
+    
+    abstract public function render();
+    
+    
+    
+    
+    
+    protected $_parts = array();
+    
+    
+    protected $_attributes = array();
+    
+    
+    public function get_header()
+    {
+        return $this->_group('header');
+    }
+    
+    
+    public function get_footer()
+    {
+        return $this->_group('footer');
+    }
+    
+    public function get_body()
+    {
+        return $this->_group('body');
+    }
     
     
     public function set($attribute, $value = null)
     {
-        if ( $value === null )
+        if ( $value === null && isset($this->_attributes[$attribute]) )
         {
-            if ( isset($this->attributes[$attribute]) )
-            {
-                unset($this->attributes[$attribute]);
-            }
+            unset($this->_attributes[$attribute]);
+            
+            return $this;
         }
-        else
-        {
-            $this->attributes[$attribute] = $value;
-        }
+        
+        $this->_attributes[$attribute] = $value;
         
         return $this;
     }
@@ -58,84 +81,47 @@ class Table {
     
     public function get($attribute, $default = null)
     {
-        return isset($this->attributes[$attribute]) ? $this->attributes[$attribute] : $default;
+        return ( isset($this->_attributes[$attribute]) ? $this->_attributes[$attribute] : $default);
     }
     
     
-    public function set_header($cells = array(), $attributes = array())
+    
+    protected function _group($part)
     {
-        $this->get_header()->add_row($cells, $attributes);
+        if ( ! isset($this->_parts[$part]) )
+        {
+            $class = get_called_class() . '\\' . ucwords($part) . '\\Group';
+            
+            $this->_parts[$part] = new $class;
+        }
+        
+        return $this->_parts[$part];
     }
     
     
-    public function add_row($cells, $attributes = array())
+    protected function _render_attributes($attributes = null)
     {
-        $this->get_body()->add_row($cells, $attributes);
+        if ( ! $attributes )
+        {
+            $attributes = $this->_attributes;
+        }
         
-        return $this;
+        if ( ! $attributes )
+        {
+            return '';
+        }
+        
+        return ' ' . array_to_attr($attributes);
     }
     
     
-    public function add_rows($rows = array())
+    
+    
+    
+    public function __toString()
     {
-        $this->get_body()->add_rows($rows);
-        
-        return $this;
+        return $this->render();
     }
-    
-    
-    public function render()
-    {
-        $table = $this->_table_open();
-        
-        $table .= ( $this->header ? $this->header->render() : '' );
-        
-        $table .= ( $this->body ? $this->body->render() : '' );
-        
-        $table .= ( $this->footer ? $this->footer->render() : '' );
-        
-        $table .= $this->_table_close();
-        
-        return $table;
-    }
-    
-    
-    public function get_header()
-    {
-        isset($this->header) OR $this->header = new Header();
-        
-        return $this->header;
-    }
-    
-    
-    public function get_body()
-    {
-        isset($this->body) OR $this->body = new Body();
-        
-        return $this->body;
-    }
-    
-    
-    public function get_footer()
-    {
-        isset($this->footer) OR $this->footer = new Footer();
-        
-        return $this->footer;
-    }
-    
-    
-    
-    protected function _table_open()
-    {
-        return '<table ' . array_to_attr($this->attributes) . '>';
-    }
-    
-    
-    protected function _table_close()
-    {
-        return '</table>';
-    }
-    
     
     
     public function __set($attribute, $value = null)
@@ -147,12 +133,6 @@ class Table {
     public function __get($attribute)
     {
         return $this->get($attribute);
-    }
-    
-    
-    public function __toString()
-    {
-        return $this->render();
     }
     
 }
