@@ -172,13 +172,20 @@ class Model extends Table {
             
             foreach ( $this->_columns as $column )
             {
-                if ( ! $column OR ! isset($data->{$column}) )
+                if ( ! $column )
                 {
-                    $value = $this->call_filter($column, $data) ? : '';
+                    $row[] = '';
+                    
+                    continue;
+                }
+                
+                if ( isset($data->{$column}) )
+                {
+                    $value = $this->call_filter($column, $data->{$column}, $data) ? : $data->{$column};
                 }
                 else
                 {
-                    $value = $this->call_filter($column, $data->{$column}) ? : $data->{$column};
+                    $value = $this->call_filter($column, $data) ? : '';
                 }
                 
                 $row[] = $value;
