@@ -76,17 +76,24 @@ class Model extends Table {
     
     public function render()
     {
-        $table = '<table' . $this->_render_attributes() . '>';
-        
-        $this->_fill_table();
-        
-        $table .= $this->get_header()->render();
-        
-        $table .= $this->get_footer()->render();
-        
-        $table .= $this->get_body()->render();
-        
-        return $table . '</table>';
+        try
+        {
+            $table = '<table' . $this->_render_attributes() . '>';
+            
+            $this->_fill_table();
+            
+            $table .= $this->get_header()->render();
+            
+            $table .= $this->get_footer()->render();
+            
+            $table .= $this->get_body()->render();
+            
+            return $table . '</table>';
+        }
+        catch ( \Exception $e )
+        {
+            return $e->getMessage();
+        }
     }
     
     
