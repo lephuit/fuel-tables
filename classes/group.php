@@ -238,7 +238,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Group_{group_tag}
      */
-    public function unset($attribute)
+    public function clear($attribute)
     {
         // To avoid errors, we wil
         if ( array_key_exists($attribute, $this->_attributes) )

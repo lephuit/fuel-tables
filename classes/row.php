@@ -236,7 +236,7 @@ class Row implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Row
      */
-    public function unset($attribute)
+    public function clear($attribute)
     {
         // To avoid errors, we wil
         if ( array_key_exists($attribute, $this->_attributes) )
