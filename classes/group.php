@@ -1,13 +1,15 @@
 <?php namespace Table;
 
-use ArrayAccess
+use ArrayAccess;
+use Countable;
+use Iterator;
 
-abstract class Group implements ArrayAccess {
+abstract class Group implements ArrayAccess, Countable, Iterator {
     
     /**
      * Keeps the group's tag like e.g., 'thead', 'tbody', or 'tfoot'
      * 
-     * Must be implemented by the respective group= itself
+     * Must be implemented by the respective group itself
      * 
      * @access  protected
      * @var     string
