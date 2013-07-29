@@ -66,8 +66,6 @@ class Helpers {
         
         // Implode the array we have just created
         $array[$key] = implode(' ', $array[$key]);
-        
-        // return $array;
     }
     
     
@@ -85,7 +83,7 @@ class Helpers {
      * 
      * @return  void
      */
-    public static function remove_attribute(array &$array, $key, $value)
+    public static function remove_attribute(array &$array, $key, $value, $purge = false)
     {
         // Allow multiple values to add
         $value = (array) $value;
@@ -111,10 +109,18 @@ class Helpers {
             }
         }
         
-        // And implode the array to a string
-        $array[$key] = implode(' ', $array[$key]);
-        
-        // return $array;
+        // If not to purge the key (i.e., allow empty values)
+        if ( ! $purge )
+        {
+            // Implode the array
+            $array[$key] = implode(' ', $array[$key]);
+        }
+        //  If empty values are not allowed
+        else
+        {
+            // Unset the empty key
+            unset($array[$key]);
+        }
     }
     
 }
