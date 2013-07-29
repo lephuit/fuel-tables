@@ -223,9 +223,11 @@ class Table implements Countable, Iterator, ArrayAccess {
     
     public function add_row()
     {
-        $this->_last_group->add_row();
+        $this->_body OR $this->add_body();
         
-        return $this->_last_group;
+        $this->_body->add_row();
+        
+        return $this->_body;
     }
     
     
