@@ -186,24 +186,17 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     }
     
     
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Add a row to the group
-     * 
-     * @access  public
-     * 
-     * @param   mixed   $values     The values to add into the row
-     * @param   array   $attributes Array of attributes to pass along to the
-     *                              row
-     * 
-     * @return  \Table\Row_{group_tag}
-     */
-    public function add_row($values, array $attributes = array())
+    public function add_row(array $values = array(), array $attributes = array())
     {
-        $class = str_replace('Group', 'Row', get_called_class());
+        return $this->_rows[] = new Row(str_replace(__CLASS__ . '_', '', get_called_class()), $values, $attributes);
+    }
+    
+    
+    public function add_cell($value = '', array $attributes = array())
+    {
+        $this->_rows OR $this->add_row();
         
-        return $this->_rows[] = new $class($values, $attributes);
+        return end($this->_rows)->add_cell($value, $attributes);
     }
     
     
@@ -294,6 +287,19 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     public function __get($property)
     {
         return $this->get($property);
+    }
+    
+    public function __call($method, $args = array())
+    {
+        if ( preg_match('/^s|get/', $method, $match) )
+        {
+            array_unshift($args, preg_replace('/^s|get_/', '', $method));
+            
+            return call_user_func_array(array($this, $match == 'set' ? 'set' : 'get'), $args);
+        }
+        
+        // Throw an exception
+        throw new \BadMethodCallException('Call to undefined method ' . get_called_class() . '::' . $method . '()');
     }
     
     

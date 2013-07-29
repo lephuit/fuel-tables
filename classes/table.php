@@ -94,21 +94,23 @@ class Table implements Countable, Iterator, ArrayAccess {
     protected $_curr_row = 0;
     
     /**
-     * The table's footer-object
+     * The table's foot-object
      * 
      * 
      * @access  protected
-     * @var     \Table\Group_Footer
+     * @var     \Table\Group_foot
      */
-    protected $_footer = null;
+    protected $_foot = null;
     
     /**
-     * The table's header-object
+     * The table's head-object
      * 
      * @access  protected
-     * @var     \Table\Group_Header
+     * @var     \Table\Group_head
      */
-    protected $_header = null;
+    protected $_head = null;
+    
+    protected $_last_group = null;
     
     
     
@@ -134,11 +136,11 @@ class Table implements Countable, Iterator, ArrayAccess {
     /**
      * Get some property of the table
      * 
-     * Can be either 'header', 'footer', 'body', 'row', 'row_N', or an attribute
+     * Can be either 'head', 'foot', 'body', 'row', 'row_N', or an attribute
      *  name e.g., 'class'
      * 
-     * @param   string  $property   The name of the property to get. Can be 'header',
-     *                              'footer', 'row', 'row_N', or any key of the
+     * @param   string  $property   The name of the property to get. Can be 'head',
+     *                              'foot', 'row', 'row_N', or any key of the
      *                              table's attributes array
      * @param   mixed   $default    The default value to return if the attribute
      *                              cannot be found. If $property is 'row', then
@@ -146,13 +148,20 @@ class Table implements Countable, Iterator, ArrayAccess {
      *                              If omitted, the last row will be returned.
      *                              Defaults to null
      * @return  mixed               Returns the property that matched or the
-     *                              Header|Footer|Body|Row-object
+     *                              head|foot|Body|Row-object
      */
     public function get($property, $default = null)
     {
-        // Match magic properties header, footer, body
-        if ( preg_match('/header|footer|body/', $property) )
+        // Match magic properties head, foot, body
+        if ( preg_match('/head|foot|body/', $property) )
         {
+            if ( ! isset($this->{'_'.$property}) )
+            {
+                return $this->{'add_' . $property}();
+                
+                // throw new \OutOfBoundsException('Cannot get [' . $property . '] for table if it has not been created yet');
+            }
+            
             return $this->{'_'.$property};
         }
         // Match magic property 'row' or 'row_N'
@@ -197,6 +206,49 @@ class Table implements Countable, Iterator, ArrayAccess {
         return $this;
     }
     
+    public function add_head(array $attributes = array())
+    {
+        return $this->_last_group = $this->_head = new Group_Head($attributes);
+    }
+    
+    public function add_foot(array $attributes = array())
+    {
+        return $this->_last_group = $this->_foot = new Group_Foot($attributes);
+    }
+    
+    public function add_body(array $attributes = array())
+    {
+        return $this->_last_group = $this->_body = new Group_Body($attributes);
+    }
+    
+    public function add_row()
+    {
+        $this->_last_group->add_row();
+        
+        return $this->_last_group;
+    }
+    
+    
+    public function render()
+    {
+        try
+        {
+            $table = '';
+            
+            $head = ( $this->_head ? $this->_head->render() : '' );
+            
+            $foot = ( $this->_foot ? $this->_foot->render() : '' );
+            
+            $body = ( $this->_body ? $this->_body->render() : '' );
+            
+            return html_tag('table', $this->_attributes, $head . PHP_EOL . $foot . PHP_EOL . $body);
+        }
+        catch ( \Exception $e )
+        {
+            return $e->getMessage();
+        }
+    }
+    
     
     
     
@@ -207,8 +259,8 @@ class Table implements Countable, Iterator, ArrayAccess {
      * Magic set
      * 
      * Allows setting properties of the table directly. It can be any of the magic
-     *  keywords 'header', 'footer', 'row' which takes the same arguments as the
-     *  respective set_header(), set_footer(), add_row() methods. If $property is
+     *  keywords 'head', 'foot', 'row' which takes the same arguments as the
+     *  respective set_head(), set_foot(), add_row() methods. If $property is
      *  non of these reserved keywords, it will be set as an attribute of the
      *  table
      * 
@@ -219,11 +271,11 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function __set($property, $value = null)
     {
-        // If the property to-set is 'header', 'footer', or 'row', we allow
+        // If the property to-set is 'head', 'foot', or 'row', we allow
         //  "magic" methods
-        if ( preg_match('/header|footer|body|row/', $property) )
+        if ( preg_match('/head|foot|body|row/', $property) )
         {
-            // Set a row? Then add a row, otherwise set either 'header' or 'footer',
+            // Set a row? Then add a row, otherwise set either 'head' or 'foot',
             //  all by calling the respective methods
             $property == 'row' && call_user_func(array($this, 'add_row'), $value) OR call_user_func(array($this, 'set_' . $property), $value);
         }
@@ -259,7 +311,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * Magic __call method
      * 
      * Allows for getting and setting properties of the table via e.g.
-     *  $table->get_header(),
+     *  $table->get_head(),
      *    or
      *  $table->set_class('active')
      * 
@@ -286,6 +338,21 @@ class Table implements Countable, Iterator, ArrayAccess {
         
         // Throw an exception
         throw new \BadMethodCallException('Call to undefined method ' . get_called_class() . '::' . $method . '()');
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Magic __toString method to render the table
+     * 
+     * @access  public
+     * 
+     * @return  string  Returns the html-string of the table
+     */
+    public function __toString()
+    {
+        return $this->render();
     }
     
     

@@ -23,8 +23,14 @@ Autoloader::add_classes(array(
     'Table\\Group_Head' => __DIR__ . '/classes/group/head.php',
     'Table\\Group_Foot' => __DIR__ . '/classes/group/foot.php',
     
-    // Table Rows
+    // Table Row
     'Table\\Row' => __DIR__ . '/classes/row.php',
+    
+    // Table Cells
+    'Table\\Cell' => __DIR__ . '/classes/cell.php',
+    'Table\\Cell_Body' => __DIR__ . '/classes/cell/body.php',
+    'Table\\Cell_Head' => __DIR__ . '/classes/cell/head.php',
+    'Table\\Cell_Foot' => __DIR__ . '/classes/cell/foot.php',
     
     // Helpers
     'Table\\Helpers' => __DIR__ . '/classes/helpers.php',
