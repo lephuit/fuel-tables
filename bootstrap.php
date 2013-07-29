@@ -36,8 +36,10 @@ Autoloader::add_classes(array(
     'Table\\Helpers' => __DIR__ . '/classes/helpers.php',
     
     // Exceptions
-    'Table\\ReadOnlyException'      => __DIR__ . '/classes/exceptions.php',
-    'Table\\OutOfBoundsException'   => __DIR__ . '/classes/exceptions.php',
+    'Table\\ReadOnlyException'          => __DIR__ . '/classes/exceptions.php',
+    'Table\\OutOfBoundsException'       => __DIR__ . '/classes/exceptions.php',
+    'Table\\InvalidArgumentException'   => __DIR__ . '/classes/exceptions.php',
+    'Table\\BadMethodCallException'     => __DIR__ . '/classes/exceptions.php',
 ));
 
 /* End of file bootstrap.php */

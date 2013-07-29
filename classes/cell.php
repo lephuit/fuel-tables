@@ -19,7 +19,7 @@ abstract class Cell {
     protected $_content = '';
     
     
-    protected $_sanitize = null;
+    protected $_sanitizers = array();
     
     
     
@@ -74,8 +74,14 @@ abstract class Cell {
      */
     public function render()
     {
-        // Prepare the content by sanitizing it or now
-        $this->_content = $this->_sanitize ? Helpers::result($this->_sanitize, $this->_content) : $this->_content;
+        // Prepare the content by sanitizing it or not
+        if ( $sanitizers = $this->get_sanitizers() )
+        {
+            foreach ( $sanitizers as $sanitizer )
+            {
+                $this->_content = Helpers::result($sanitizer, $this->_content);
+            }
+        }
         
         return html_tag(
             $this->_cell_tag,
@@ -237,13 +243,61 @@ abstract class Cell {
      * 
      * @return  \Table\Cell
      */
-    public function sanitize($callback = 'Security::htmlentities')
+    public function sanitize($callback = 'Security::htmlentities', $mode = 0)
     {
-        // Set the sanitizing function and remember that false means unsetting
-        $this->_sanitize = ( $callback !== false ? $callback : null );
+        // Allow different modes of adding sanitizers
+        switch ( $mode )
+        {
+            // By default and for false: Set it as the only callback (if callback is
+            //  not false, then unset all registered sanitizers)
+            default:
+            case 0:
+            case false:
+                $this->_sanitizers = $callback !== false ? array($callback) : array();
+            break;
+            // Append
+            case 1:
+                array_push($this->_sanitizers, $callback);
+            break;
+            // Prepend
+            case -1:
+                array_unshift($this->_sanitizers, $callback);
+            break;
+        }
         
         // For chaining
         return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Check whether the cell has sanitizers defined
+     * 
+     * @access  public
+     * 
+     * @return  boolean     Returns true if there are registered sanitizers, otherwise
+     *                      false
+     */
+    public function has_sanitizers()
+    {
+        return isset($this->_sanitizers);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get all registered sanitizers for the current cell
+     * 
+     * @access  public
+     * 
+     * @return  mixed   Returns an array of sanitizers or false if there are none
+     */
+    public function get_sanitizers()
+    {
+        return $this->has_sanitizers() ? $this->_sanitizers : false;
     }
     
     

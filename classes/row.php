@@ -92,6 +92,77 @@ class Row implements ArrayAccess, Countable, Iterator {
     //--------------------------------------------------------------------------
     
     /**
+     * Set or unset the callback to sanitize the content
+     * 
+     * @access  public
+     * 
+     * @param   mixed   $callback   The callback to use for sanitizing. Must be
+     *                              a callable string (e.g., 'Security::htmlentities')
+     *                              or a closure. If set to false, then sanitation
+     *                              will be deactivated for all cells, if omitted
+     *                              the filter will be 'Security::htmlentities'.
+     *                              If an array, it must have the same number of
+     *                              values as there are cells so that each cell
+     *                              has its own sanitizer.
+     *                              Defaults to 'Security::htmlentities'
+     * 
+     * @return  \Table\Row
+     */
+    public function sanitize($callback = 'Security::htmlentities')
+    {
+        // Not an array of callbacks?
+        if ( ! is_array($callback) )
+        {
+            // Just make it an array with all the same callbacks
+            $callback = array_fill(0, count($this->_cells), $callback);
+        }
+        
+        // // Allow passing multiple callbacks per cell, but we need to ensure having
+        // //  the same number of sanitizers as we have cells
+        // if ( count($callback) < count($this->_cells) )
+        // {
+        //     // We don't, so throw an exception
+        //     throw new InvalidArgumentException('Number of callbacks must be equal to the number of cells');
+        // }
+        // // And in case there have been too many callbacks, we will just strip off
+        // //  the ones too many
+        // elseif ( count($callback) > count($this->_cells) )
+        // {
+        //     $callback = @array_splice($callback, 0, count($this->_cells));
+        // }
+        
+        // Loop over every callback
+        foreach ( $callback as $k => $_callback )
+        {
+            // If the callback is either 1, or -1, then we assume it's the mode
+            //  and the key is the actual callback
+            if ( ( $_callback === 1 ) OR ( $_callback === -1 ) )
+            {
+                $_mode = $_callback;
+                $_callback = $k;
+                // And tell the respective cell to use that callback
+                $this->_cells[$k]->sanitize($_callback, $_mode);
+            }
+            // Callback is false? Then reset callback for the cell
+            elseif ( $_callback === false )
+            {
+                $this->_cells[$k]->sanitize($_callback);
+            }
+            // Otherwise the callback is unchanged and appended
+            else
+            {
+                $this->_cells[$k]->sanitize($_callback, 0);
+            }
+        }
+        
+        // Done, return me for chaining
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
      * Renders the row's content
      * 
      * @access  public
@@ -100,12 +171,18 @@ class Row implements ArrayAccess, Countable, Iterator {
      */
     public function render()
     {
+        // Lazy as we are we will be using fuel's html_tag
         return html_tag(
+            // The row-tag to open (basically always 'tr')
             $this->_row_tag,
+            // The attributes
             $this->_attributes,
+            // See if we have cells
             ( $this->_cells
+                // Then implode those with PHP_EOL
                 ? implode(
                     PHP_EOL,
+                    // After calling the 'render' method of every cell
                     array_map(
                         function($cell)
                         {
@@ -114,6 +191,9 @@ class Row implements ArrayAccess, Countable, Iterator {
                         $this->_cells
                     )
                 )
+                // No rows, then there's no body but we cannot use false, as this
+                //  would result in '<tr />' instead of '<tr></tr>' due to html_tag's
+                //  logic
                 : ''
             )
         );
@@ -232,7 +312,9 @@ class Row implements ArrayAccess, Countable, Iterator {
     {
         $class = 'Table\\Cell_' . $this->_type;
         
-        $this->_cells[] = ( $value instanceof $class ? $value : new $class($value, $attributes) );
+        $cell = ( $value instanceof $class ? $value : new $class($value, $attributes) );
+        
+        $this->_cells[] =& $cell;
         
         return $this;
     }
