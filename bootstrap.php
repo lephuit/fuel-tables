@@ -40,6 +40,7 @@ Autoloader::add_classes(array(
     'Table\\OutOfBoundsException'       => __DIR__ . '/classes/exceptions.php',
     'Table\\InvalidArgumentException'   => __DIR__ . '/classes/exceptions.php',
     'Table\\BadMethodCallException'     => __DIR__ . '/classes/exceptions.php',
+    'Table\\HydrationException'         => __DIR__ . '/classes/exceptions.php',
 ));
 
 /* End of file bootstrap.php */

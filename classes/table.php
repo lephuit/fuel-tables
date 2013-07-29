@@ -118,6 +118,22 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     protected $_model = null;
     
+    /**
+     * Keeps the query used to get data from the DB
+     * 
+     * @access  protected
+     * @var     \Orm\Query
+     */
+    protected $_query = null;
+    
+    /**
+     * Keeps the query options like 'limit', 'offset', 'order_by'
+     * 
+     * @access  protected
+     * @var     array
+     */
+    protected $_query_opts = array();
+    
     
     
     
@@ -212,6 +228,19 @@ class Table implements Countable, Iterator, ArrayAccess {
         return $this;
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set the columns used for the table (basically the headers)
+     * 
+     * @access  public
+     * @see     \Table\Group::set_columns()
+     * 
+     * @param   array   $columns    Array of column names or an advanced array
+     * 
+     * @return  \Table\Group_Head
+     */
     public function set_columns(array $columns = array())
     {
         $this->_head OR $this->add_head();
@@ -219,28 +248,92 @@ class Table implements Countable, Iterator, ArrayAccess {
         return $this->_head->set_columns($columns);
     }
     
-    public function set_model($model)
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set the namespace model's name to work with and get data from
+     * 
+     * @access  public
+     * 
+     * @param   string  $model      Namespaced name of model
+     * @param   boolean $hydrate    Automatically hydrate the data right after
+     *                              assigning the model.  Defaults to false
+     * 
+     * @return  \Table\Table
+     */
+    public function set_model($model, $hydrate = false)
     {
         $this->_model = $model;
+        
+        $hydrate && $this->hydrate();
         
         return $this;
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add a header to the table and return the header-object
+     * 
+     * @access  public
+     * @see     \Table\Group_Head::set_columns()
+     * 
+     * @param   array   $columns    The columns to use for the header
+     * @param   array   $attributes Attributes to pass to the header
+     * 
+     * @return  \Table\Group_Head
+     */
     public function add_head(array $columns = array(), array $attributes = array())
     {
         return $this->_head = new Group_Head($columns, $attributes);
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add a footer to the table and return the footer-object
+     * 
+     * @access  public
+     * 
+     * @param   array   $attributes Attributes to pass to the footer
+     * 
+     * @return  \Table\Group_Foot
+     */
     public function add_foot(array $attributes = array())
     {
         return $this->_foot = new Group_Foot(array(), $attributes);
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add a body to the table and return the body-object
+     * 
+     * @access  public
+     * 
+     * @param   array   $attributes Attributes to pass to the body
+     * 
+     * @return  \Table\Group_Body
+     */
     public function add_body(array $attributes = array())
     {
         return $this->_body = new Group_Body(array(), $attributes);
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add a row to the body of the table
+     * 
+     * @access  public
+     * 
+     * @return  \Table\Group_Body
+     */
     public function add_row()
     {
         $this->_body OR $this->add_body();
@@ -251,10 +344,22 @@ class Table implements Countable, Iterator, ArrayAccess {
     }
     
     
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Render the table and all its parts
+     * 
+     * @access  public
+     * 
+     * @return  string          Returns the generated HTML-table or the error message
+     *                          if rendering failed
+     */
     public function render()
     {
         try
         {
+            $this->hydrate();
+            
             $table = '';
             
             $head = ( $this->_head ? $this->_head->render() : '' );
@@ -269,6 +374,84 @@ class Table implements Countable, Iterator, ArrayAccess {
         {
             return $e->getMessage();
         }
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Hydrate the table with data from the database or the data added manually
+     * 
+     * @access  public
+     * 
+     * @return  \Table\Table
+     */
+    public function hydrate()
+    {
+        if ( ( ! $this->_model ) OR $this->_data )
+        {
+            throw new HydrationException('No Model or data set for table');
+        }
+        
+        $q = $this->build_query();
+        
+        $results = $q->get();
+        
+        if ( ! $results )
+        {
+            $this->_data = array();
+        }
+        
+        $data = array();
+        
+        foreach ( $results as $result )
+        {
+            $data[] = $result->to_array();
+        }
+        
+        \Debug::dump($data);
+        
+        die();
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Build the query used to gather data
+     * 
+     * Takes care of the set pagination-, filtering-, searching-, etc options
+     * 
+     * @access  public
+     * 
+     * @return  \Orm\Query
+     */
+    public function build_query()
+    {
+        // Already built a query?
+        if ( $this->_query )
+        {
+            // Return it
+            return $this->_query;
+        }
+        
+        // Create the query
+        $q = call_user_func(array($this->_model, 'query'));
+        
+        // Order by something?
+        array_key_exists('order_by', $this->_query_opts) && $q->order_by($this->_query_opts['order_by']);
+        
+        // Limit by something?
+        array_key_exists('limit', $this->_query_opts) && $q->limit($this->_query_opts['limit']);
+        
+        // Offset by something?
+        array_key_exists('offset', $this->_query_opts) && $q->offset($this->_query_opts['offset']);
+        
+        // Where (i.e., filter) by something?
+        array_key_exists('where', $this->_query_opts) && $q->where($this->_query_opts['where']);
+        
+        // Done so far, assign it to the storage and return it
+        return $this->_query = $q;
     }
     
     
