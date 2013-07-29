@@ -388,7 +388,7 @@ class Table implements Countable, Iterator, ArrayAccess {
     
     public function current()
     {
-        return $this->_rows[$this->key()];
+        return $this->_body[$this->key()];
     }
     
     public function rewind()
@@ -408,7 +408,7 @@ class Table implements Countable, Iterator, ArrayAccess {
     
     public function valid()
     {
-        return isset($this->_rows[$this->_curr_row]);
+        return isset($this->_body[$this->_curr_row]);
     }
     
     
@@ -423,7 +423,7 @@ class Table implements Countable, Iterator, ArrayAccess {
     
     public function offsetExists($offset)
     {
-        return isset($this->_rows[$offset]);
+        return $this->_body && isset($this->_body[$offset]);
     }
     
     public function offsetGet($offset)
@@ -433,7 +433,7 @@ class Table implements Countable, Iterator, ArrayAccess {
             throw new OutOfBoundsException('Access to undefined index [' . $offset . ']');
         }
         
-        return $this->_rows[$offset];
+        return $this->_body[$offset];
     }
     
     public function offsetSet($offset, $value)
@@ -445,7 +445,7 @@ class Table implements Countable, Iterator, ArrayAccess {
     {
         if ( $this->offsetExists($offset) )
         {
-            unset($this->_rows[$offset]);
+            unset($this->_body[$offset]);
         }
     }
     
