@@ -55,6 +55,25 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{row_tag}>'
      */
+    public static function forge($type, array $values = array(), array $attributes = array())
+    {
+        return new static($type, $values, $attributes);
+    }
+    
+    
+    
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Create a new table-row with the given attributes
+     * 
+     * @access  public
+     * 
+     * @param   array   $attributes     Array of attributes to set for the
+     *                                  wrapping '<t{row_tag}>'
+     */
     public function __construct($type, array $values = array(), array $attributes = array())
     {
         $this->_type        = $type;

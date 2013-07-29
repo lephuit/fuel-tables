@@ -206,19 +206,26 @@ class Table implements Countable, Iterator, ArrayAccess {
         return $this;
     }
     
-    public function add_head(array $attributes = array())
+    public function add_head(array $columns = array(), array $attributes = array())
     {
-        return $this->_last_group = $this->_head = new Group_Head($attributes);
+        return $this->_last_group = $this->_head = new Group_Head($columns, $attributes);
+    }
+    
+    public function set_columns(array $columns = array())
+    {
+        $this->_head OR $this->add_head();
+        
+        return $this->_last_group = $this->_head->set_columns($columns);
     }
     
     public function add_foot(array $attributes = array())
     {
-        return $this->_last_group = $this->_foot = new Group_Foot($attributes);
+        return $this->_last_group = $this->_foot = new Group_Foot(array(), $attributes);
     }
     
     public function add_body(array $attributes = array())
     {
-        return $this->_last_group = $this->_body = new Group_Body($attributes);
+        return $this->_last_group = $this->_body = new Group_Body(array(), $attributes);
     }
     
     public function add_row()

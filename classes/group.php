@@ -47,16 +47,64 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     //--------------------------------------------------------------------------
     
     /**
+     * Forge a new table-group with the given attributes
+     * 
+     * @access  public
+     * 
+     * @param   array   $columns        An array of columns to use
+     * @param   array   $attributes     Array of attributes to set for the
+     *                                  wrapping '<t{group_tag}>'
+     */
+    public static function forge(array $columns = array(), array $attributes = array())
+    {
+        return new static($columns, $attributes);
+    }
+    
+    
+    
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
      * Create a new table-group with the given attributes
      * 
      * @access  public
      * 
+     * @param   array   $columns        An array of columns to use
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{group_tag}>'
      */
-    public function __construct(array $attributes = array())
+    public function __construct(array $columns = array(), array $attributes = array())
     {
         $this->_attributes = $attributes;
+        
+        $this->set_columns($columns);
+    }
+    
+    
+    public function set_columns(array $columns = array())
+    {
+        if ( $columns && ! $this instanceof Group_Head )
+        {
+            throw new \BadMethodCallException('Cannot set columns on table-body or table-foot');
+        }
+        
+        if ( ! $columns )
+        {
+            $this->_rows = array();
+            
+            return $this;
+        }
+        
+        $this->add_row();
+        
+        foreach ( $columns as $k => $column )
+        {
+            $this->add_cell( is_array($column) ? $k : $column, is_array($column) ? $column : array() );
+        }
+        
+        return $this;
     }
     
     

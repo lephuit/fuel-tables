@@ -4,7 +4,7 @@ class Helpers {
     
     public static function result($val)
     {
-        return ( $val instanceof Closure ? $val() : $val );
+        return ( is_callable($val) ? call_user_func_array($val, @array_splice(func_get_args(), 1)) : $val );
     }
     
     
