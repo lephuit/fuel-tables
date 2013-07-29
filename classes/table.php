@@ -245,7 +245,7 @@ class Table implements Countable, Iterator, ArrayAccess {
     {
         $this->_head OR $this->add_head();
         
-        return $this->_head->set_columns($columns);
+        return $this->_head->add_cells($columns);
     }
     
     
@@ -358,8 +358,6 @@ class Table implements Countable, Iterator, ArrayAccess {
     {
         try
         {
-            $this->hydrate();
-            
             $table = '';
             
             $head = ( $this->_head ? $this->_head->render() : '' );
@@ -388,7 +386,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function hydrate()
     {
-        if ( ( ! $this->_model ) OR $this->_data )
+        if ( ! $this->_model )
         {
             throw new HydrationException('No Model or data set for table');
         }

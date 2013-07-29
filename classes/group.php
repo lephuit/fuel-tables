@@ -79,7 +79,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     {
         $this->_attributes = $attributes;
         
-        ( $this instanceof Group_Head ) && $this->set_columns($columns);
+        $columns && $this->add_cells($columns);
     }
     
     
@@ -223,6 +223,27 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
         $this->_rows OR $this->add_row();
         
         return end($this->_rows)->add_cell($value, $attributes);
+    }
+    
+    public function add_cells(array $values = array())
+    {
+        if ( ! $values )
+        {
+            return $this;
+        }
+        
+        foreach ( $values as $value => $attributes )
+        {
+            if ( ! is_array($attributes) )
+            {
+                $value = $attributes;
+                $attributes = array();
+            }
+            
+            $this->add_cell($value, $attributes);
+        }
+        
+        return $this;
     }
     
     
