@@ -53,7 +53,7 @@ abstract class Cell {
         return html_tag(
             $this->_cell_tag,
             $this->_attributes,
-            $this->_content ? : false
+            $this->_content ? : ''
         );
     }
     

@@ -85,7 +85,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
                         $this->_rows
                     )
                 )
-                : false
+                : ''
             )
         );
     }
