@@ -83,7 +83,7 @@ class Helpers {
      * 
      * @return  void
      */
-    public static function remove_attribute(array &$array, $key, $value, $purge = false)
+    public static function remove_attribute(array &$array, $key, $value = null, $purge = false)
     {
         // Allow multiple values to add
         $value = (array) $value;
@@ -92,7 +92,21 @@ class Helpers {
         if ( ! isset($array[$key]) )
         {
             // That's easy, return $array
-            return $array;
+            return;
+        }
+        // Otherwise, if no value is given we will empty or purge the target array
+        elseif ( ! $value )
+        {
+            if ( $purge )
+            {
+                unset($array[$key]);
+            }
+            else
+            {
+                $array[$key] = '';
+            }
+            
+            return;
         }
         
         // Split the value of $key to an array so we can loop over it

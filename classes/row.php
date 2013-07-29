@@ -248,21 +248,23 @@ class Row implements ArrayAccess, Countable, Iterator {
     }
     
     
-    //--------------------------------------------------------------------------
-    
     /**
      * Remove an attribute's value
      * 
      * @access  public
      * 
      * @param   string  $attribute  The attribute's name to remove
-     * @param   string  $value      The value of the attribute to remove
+     * @param   string  $value      The value of the attribute to remove. If omitted
+     *                              it will empty or unset the attribute.
+     *                              Defaults to null
+     * @param   boolean $purge      Whether to remove empty-value keys from the
+     *                              attributes array
      * 
      * @return  \Table\Row
      */
-    public function remove($attribute, $value)
+    public function remove($attribute, $value = null, $purge = false)
     {
-        Helpers::remove_attribute($this->_attributes, $attribute, $value);
+        Helpers::remove_attribute($this->_attributes, $attribute, $value, $purge);
         
         return $this;
     }
@@ -281,13 +283,7 @@ class Row implements ArrayAccess, Countable, Iterator {
      */
     public function clear($attribute)
     {
-        // To avoid errors, we wil
-        if ( array_key_exists($attribute, $this->_attributes) )
-        {
-            unset($this->_attributes[$attribute]);
-        }
-        
-        return $this;
+        return $this->remove($attribute, null, true);
     }
     
     

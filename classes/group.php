@@ -212,9 +212,9 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Group_{group_tag}
      */
-    public function remove($attribute, $value)
+    public function remove($attribute, $value = null, $purge = false)
     {
-        Helpers::remove_attribute($this->_attributes, $attribute, $value);
+        Helpers::remove_attribute($this->_attributes, $attribute, $value, $purge);
         
         return $this;
     }
@@ -233,13 +233,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function clear($attribute)
     {
-        // To avoid errors, we wil
-        if ( array_key_exists($attribute, $this->_attributes) )
-        {
-            unset($this->_attributes[$attribute]);
-        }
-        
-        return $this;
+        return $this->remove($attribute, null, true);
     }
     
     
