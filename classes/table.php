@@ -32,7 +32,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public static function forge($name = '_default_', array $attributes = array())
+    public static function forge(array $attributes = array())
     {
         // Return a new \Table\Table-object
         return new static($attributes);
@@ -52,7 +52,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public static function instance($name = '_default_')
+    public static function instance($name = '_default_', array $attributes = array())
     {
         // New instance?
         if ( ! isset(static::$_instances[$name]) )
@@ -110,7 +110,13 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     protected $_head = null;
     
-    protected $_last_group = null;
+    /**
+     * Stores the namespace model-name for getting the data
+     * 
+     * @access  protected
+     * @var     string
+     */
+    protected $_model = null;
     
     
     
@@ -206,26 +212,33 @@ class Table implements Countable, Iterator, ArrayAccess {
         return $this;
     }
     
-    public function add_head(array $columns = array(), array $attributes = array())
-    {
-        return $this->_last_group = $this->_head = new Group_Head($columns, $attributes);
-    }
-    
     public function set_columns(array $columns = array())
     {
         $this->_head OR $this->add_head();
         
-        return $this->_last_group = $this->_head->set_columns($columns);
+        return $this->_head->set_columns($columns);
+    }
+    
+    public function set_model($model)
+    {
+        $this->_model = $model;
+        
+        return $this;
+    }
+    
+    public function add_head(array $columns = array(), array $attributes = array())
+    {
+        return $this->_head = new Group_Head($columns, $attributes);
     }
     
     public function add_foot(array $attributes = array())
     {
-        return $this->_last_group = $this->_foot = new Group_Foot(array(), $attributes);
+        return $this->_foot = new Group_Foot(array(), $attributes);
     }
     
     public function add_body(array $attributes = array())
     {
-        return $this->_last_group = $this->_body = new Group_Body(array(), $attributes);
+        return $this->_body = new Group_Body(array(), $attributes);
     }
     
     public function add_row()

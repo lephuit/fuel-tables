@@ -87,7 +87,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     {
         if ( $columns && ! $this instanceof Group_Head )
         {
-            throw new \BadMethodCallException('Cannot set columns on table-body or table-foot');
+            throw new BadMethodCallException('Cannot set columns on table-body or table-foot');
         }
         
         if ( ! $columns )
@@ -341,7 +341,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
         }
         
         // Throw an exception
-        throw new \BadMethodCallException('Call to undefined method ' . get_called_class() . '::' . $method . '()');
+        throw new BadMethodCallException('Call to undefined method ' . get_called_class() . '::' . $method . '()');
     }
     
     
