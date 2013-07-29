@@ -95,7 +95,7 @@ class Row implements ArrayAccess, Countable, Iterator {
                         $this->_cells
                     )
                 )
-                : false
+                : ''
             )
         );
     }
@@ -207,7 +207,7 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes Array of attributes to pass along to the
      *                              row
      * 
-     * @return  \Table\Cell_{TYPE}
+     * @return  \Table\Row
      */
     public function add_cell($value, array $attributes = array())
     {
@@ -215,6 +215,35 @@ class Row implements ArrayAccess, Countable, Iterator {
         
         $this->_cells[] = ( $value instanceof $class ? $value : new $class($value, $attributes) );
         
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Allows to skip one or more cells
+     * 
+     * @access  public
+     * 
+     * @param   integer     $skip   The number of cells to skip.  Defaults to 1
+     * 
+     * @return  \Table\Row
+     */
+    public function skip_cell($skip = 1)
+    {
+        // Make sure we have just integers
+        $skip = intval($skip);
+        
+        // And then add as many empty cells as requested
+        do
+        {
+            $this->add_cell('');
+            $skip--;
+        }
+        while ( $skip > 0 );
+        
+        // For chaining
         return $this;
     }
     
