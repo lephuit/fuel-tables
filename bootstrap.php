@@ -23,6 +23,9 @@ Autoloader::add_classes(array(
     'Table\\Group_Head' => __DIR__ . '/classes/group/head.php',
     'Table\\Group_Foot' => __DIR__ . '/classes/group/foot.php',
     
+    // Table Rows
+    'Table\\Row' => __DIR__ . '/classes/row.php',
+    
     // Helpers
     'Table\\Helpers' => __DIR__ . '/classes/helpers.php',
     
