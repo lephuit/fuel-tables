@@ -160,7 +160,7 @@ class Table implements Countable, Iterator, ArrayAccess {
         {
             // Either $property == 'row_4' OR 'row', if it's 'row', then the
             //  offset is (unfortunately) given in $default
-            strpos($property, '_') !== false && $offset = substr($property, 4) OR $offset = ( $default ? : count($this->_rows) - 1 );
+            $offset = ( false !== strpos('row_', $property) ? substr($property, 4) : ( $default ? : count($this->_rows) - 1 ) );
             
             // And use the implemented ArrayAccess-Interface to return the requested
             //  row
