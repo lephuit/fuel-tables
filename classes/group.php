@@ -30,6 +30,14 @@ abstract class Group implements ArrayAccess {
      */
     protected $_rows = array();
     
+    /**
+     * For ArrayAccess
+     * 
+     * @access  protected
+     * @var     integer
+     */
+    protected $_curr_row = 0;
+    
     
     
     
@@ -359,7 +367,7 @@ abstract class Group implements ArrayAccess {
     {
         if ( ! $this->offsetExists($offset) )
         {
-            throw new OutOfBoundsException('Access to undefined index [' . $offset . ']');
+            throw new OutOfBoundsException('Access to undefined row-index [' . $offset . ']');
         }
         
         return $this->_rows[$offset];
@@ -367,7 +375,7 @@ abstract class Group implements ArrayAccess {
     
     public function offsetSet($offset, $value)
     {
-        throw new ReadOnlyException('Cannot set index [' . $offset . '] as rows are read-only');
+        throw new ReadOnlyException('Cannot set row-index [' . $offset . '] as rows are read-only');
     }
     
     public function offsetUnset($offset)
