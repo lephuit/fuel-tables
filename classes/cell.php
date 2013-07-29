@@ -11,12 +11,35 @@ abstract class Cell {
     protected $_attributes = array();
     
     /**
-     * Keeps the cells added to the cell
+     * Keeps the content of the cell
      * 
      * @access  protected
      * @var     array
      */
-    protected $_content = array();
+    protected $_content = '';
+    
+    
+    protected $_sanitize = null;
+    
+    
+    
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Forge a new table-cell with the given attributes
+     * 
+     * @access  public
+     * 
+     * @param   string  $content        The content of the cell
+     * @param   array   $attributes     Array of attributes to set for the
+     *                                  wrapping '<t{cell_tag}>'
+     */
+    public static function forge($content, array $attributes = array())
+    {
+        return new static($content, $attributes);
+    }
     
     
     
@@ -29,6 +52,7 @@ abstract class Cell {
      * 
      * @access  public
      * 
+     * @param   string  $content        The content of the cell
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{cell_tag}>'
      */
@@ -50,10 +74,13 @@ abstract class Cell {
      */
     public function render()
     {
+        // Prepare the content by sanitizing it or now
+        $this->_content = $this->_sanitize ? Helpers::result($this->_sanitize, $this->_content) : $this->_content;
+        
         return html_tag(
             $this->_cell_tag,
             $this->_attributes,
-            $this->_content ? : ''
+            $this->_content
         );
     }
     
@@ -191,6 +218,32 @@ abstract class Cell {
     public function clear($attribute)
     {
         return $this->remove($attribute, null, true);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set or unset the callback to sanitize the content
+     * 
+     * @access  public
+     * 
+     * @param   mixed   $callback   The callback to use for sanitizing. Must be
+     *                              a callable string (e.g., 'Security::htmlentities')
+     *                              or a closure. If set to false, then sanitation
+     *                              will be deactivated for the cell, if omitted
+     *                              the filter will be 'Security::htmlentities'.
+     *                              Defaults to 'Security::htmlentities'
+     * 
+     * @return  \Table\Cell
+     */
+    public function sanitize($callback = 'Security::htmlentities')
+    {
+        // Set the sanitizing function and remember that false means unsetting
+        $this->_sanitize = ( $callback !== false ? $callback : null );
+        
+        // For chaining
+        return $this;
     }
     
     
