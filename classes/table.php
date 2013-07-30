@@ -403,13 +403,13 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Group_Body
      */
-    public function add_row()
+    public function add_row(array $columns = array())
     {
         $this->_body OR $this->add_body();
         
-        $this->_body->add_row();
+        $this->_body->add_row($columns);
         
-        return $this->_body;
+        return $this;
     }
     
     
@@ -641,7 +641,9 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function count()
     {
-        return count($this->_rows);
+        $this->_body OR $this->add_body();
+        
+        return count($this->_body);
     }
     
     
