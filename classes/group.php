@@ -261,9 +261,9 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function add_cell($value = '', array $attributes = array())
     {
-        $this->_rows OR $this->add_row();
+        $row = $this->_rows ? end($this->_rows) : $this->add_row();
         
-        return end($this->_rows)->add_cell($value, $attributes);
+        return $row->add_cell($value, $attributes);
     }
     
     
