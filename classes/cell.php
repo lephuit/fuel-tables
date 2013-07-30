@@ -264,12 +264,10 @@ abstract class Cell {
         // Allow different modes of adding sanitizers
         switch ( $mode )
         {
-            // By default and for false: Set it as the only callback (if callback is
-            //  not false, then unset all registered sanitizers)
+            // By default the callback given will be the only one (except if it's
+            //  set to false, in which case it will unset the callbacks)
             default:
-            case 0:
-            case false:
-                $this->_sanitizers = $callback !== false ? array($callback) : array();
+                $this->_sanitizers = $callback === false ? array() : array($callback === true ? 'Security::htmlentities' : $callback);
             break;
             // Append
             case 1:
