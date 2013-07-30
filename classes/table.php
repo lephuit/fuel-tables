@@ -279,7 +279,7 @@ class Table implements Countable, Iterator, ArrayAccess {
             'attributes'    => array(),
             'use'           => null,
             'display'       => null,
-            'sanitize'      => null,
+            'sanitize'      => false,
         );
         
         // Loop over the given columns to add them
@@ -289,7 +289,7 @@ class Table implements Countable, Iterator, ArrayAccess {
             if ( is_array($options) )
             {
                 // Does it contain any of the keys from $defaults? Then 
-                ! in_array(array_keys($defaults), $options) && $options = array('attributes' => $options);
+                // array_diff_assoc($defaults, $options) && $options = array('attributes' => $options);
                 // Merge the given options with the defaults
                 $options = \Arr::merge($defaults, $options);
                 // And extract the column header (if any) otherwise use the key
