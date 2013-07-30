@@ -199,6 +199,10 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
             // Use ArrayAccess to return
             return $this[$offset];
         }
+        elseif ( $property === 'attributes' )
+        {
+            return $this->_attributes;
+        }
         
         // Assume an attribute, so return that one (if found, otherwise $default)
         return array_key_exists($property, $this->_attributes) ? $this->_attributes[$property] : $default;
