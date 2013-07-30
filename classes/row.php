@@ -93,13 +93,7 @@ class Row implements ArrayAccess, Countable, Iterator {
         $this->_type        = $type;
         $this->_attributes  = $attributes;
         
-        if ( $values )
-        {
-            foreach ( $values as $val )
-            {
-                $this->add_cell($val, array(), $type);
-            }
-        }
+        $values && $this->add_cells($values);
     }
     
     
@@ -329,6 +323,41 @@ class Row implements ArrayAccess, Countable, Iterator {
         $cell = ( $value instanceof $class ? $value : new $class($value, $attributes) );
         
         $this->_cells[] =& $cell;
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add multiple cells to this row
+     * 
+     * @access  public
+     * @see     \Table\Cell
+     * 
+     * @param   array   $values     An array of values or an array of
+     *                              value => attributes.
+     * 
+     * @return   \Table\Row
+     */
+    public function add_cells(array $values = array())
+    {
+        if ( ! $values )
+        {
+            return $this;
+        }
+        
+        foreach ( $values as $value => $attributes )
+        {
+            if ( ! is_array($attributes) )
+            {
+                $value = $attributes;
+                $attributes = array();
+            }
+            
+            $this->add_cell($value, $attributes);
+        }
         
         return $this;
     }
