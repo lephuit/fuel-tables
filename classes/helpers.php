@@ -1,12 +1,41 @@
 <?php namespace Table;
 
+/**
+ * Part of the fuel-Table-package
+ *
+ * @package     Table
+ * @namespace   Table
+ * @version     0.1-dev
+ * @author      Gasoline Development Team
+ * @author      Fuel Development Team
+ * @license     MIT License
+ * @copyright   2013 Gasoline Development Team
+ * @copyright  2010 - 2013 Fuel Development Team
+ * @link        http://hubspace.github.io/fuel-tables
+ */
+
 class Helpers {
     
+    /**
+     * Return the result of a value by checking whether it's callable or not
+     * 
+     * @access  public
+     * @static
+     * 
+     * @param   mixed   $val    The value to check. If it's a closure or a callable
+     *                          expression, it will be called with the arguments
+     *                          >= 2 passed to this method
+     * 
+     * @return  mixed           Returns the value of $val or the result of calling
+     *                          the callback/closure with arguments passed
+     */
     public static function result($val)
     {
         return ( is_callable($val) ? call_user_func_array($val, @array_splice(func_get_args(), 1)) : $val );
     }
     
+    
+    //--------------------------------------------------------------------------
     
     /**
      * Add an attribute to the given array

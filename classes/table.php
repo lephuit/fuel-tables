@@ -1,5 +1,19 @@
 <?php namespace Table;
 
+/**
+ * Part of the fuel-Table-package
+ *
+ * @package     Table
+ * @namespace   Table
+ * @version     0.1-dev
+ * @author      Gasoline Development Team
+ * @author      Fuel Development Team
+ * @license     MIT License
+ * @copyright   2013 Gasoline Development Team
+ * @copyright  2010 - 2013 Fuel Development Team
+ * @link        http://hubspace.github.io/fuel-tables
+ */
+
 use Countable;
 use Iterator;
 use ArrayAccess;
@@ -52,13 +66,13 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public static function instance($name = '_default_', array $attributes = array())
+    public static function instance($name = '_default_')
     {
         // New instance?
         if ( ! isset(static::$_instances[$name]) )
         {
             // Then forge it
-            static::$_instances[$name] = static::forge($attributes);
+            static::$_instances[$name] = static::forge();
         }
         
         // And return it
@@ -221,6 +235,20 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function set($property, $value = null, $append = false)
     {
+        if ( $property === 'attributes' )
+        {
+            if ( ! is_array($value) )
+            {
+                throw new InvalidArgumentException('To set attributes on the table an array must be provided but ' . gettype($value) . ' given');
+            }
+            
+            $this->_attributes = $value;
+        }
+        else
+        {
+            // Append it? Then use our helper to add the attribute, otherwise just overwrite it
+            $append === true && Helpers::add_attribute($this->_attributes, $property, $value) OR $this->_attributes[$property] = $value;
+        }
         // Append it? Then use our helper to add the attribute, otherwise just overwrite it
         $append === true && Helpers::add_attribute($this->_attributes, $property, $value) OR $this->_attributes[$property] = $value;
         
@@ -243,9 +271,50 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function set_columns(array $columns = array())
     {
+        // We need to have a head-group or we will forge one
         $this->_head OR $this->add_head();
         
-        return $this->_head->add_cells($columns);
+        // The default options we accept for a column
+        $defaults = array(
+            'attributes'    => array(),
+            'use'           => null,
+            'display'       => null,
+            'sanitize'      => null,
+        );
+        
+        // Loop over the given columns to add them
+        foreach ( $columns as $column => $options )
+        {
+            // Got an array for the options?
+            if ( is_array($options) )
+            {
+                // Does it contain any of the keys from $defaults? Then 
+                ! in_array(array_keys($defaults), $options) && $options = array('attributes' => $options);
+                // Merge the given options with the defaults
+                $options = \Arr::merge($defaults, $options);
+                // And extract the column header (if any) otherwise use the key
+                //  of $columns
+                $options['display'] && $column = $options['display'];
+            }
+            // $options is no array so we will swich $column and $options
+            else
+            {
+                $column = $options;
+                $options = $defaults;
+            }
+            
+            // And add a new cell to the head by calling Cell_Head::forge() so
+            //  we can chain to sanitize() as well
+            $this->_head->add_cell(
+                Cell_Head::forge(
+                    $column,
+                    $options['attributes']
+                )->sanitize($options['sanitize'])
+            );
+        }
+        
+        // Return the table for chaining
+        return $this;
     }
     
     
@@ -287,7 +356,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_head(array $columns = array(), array $attributes = array())
     {
-        return $this->_head = new Group_Head($columns, $attributes);
+        return $this->_head = Group_Head::forge($columns, $attributes);
     }
     
     
@@ -304,7 +373,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_foot(array $attributes = array())
     {
-        return $this->_foot = new Group_Foot(array(), $attributes);
+        return $this->_foot = Group_Foot::forge(array(), $attributes);
     }
     
     
@@ -321,7 +390,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_body(array $attributes = array())
     {
-        return $this->_body = new Group_Body(array(), $attributes);
+        return $this->_body = Group_Body::forge(array(), $attributes);
     }
     
     

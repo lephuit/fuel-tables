@@ -1,5 +1,19 @@
 <?php namespace Table;
 
+/**
+ * Part of the fuel-Table-package
+ *
+ * @package     Table
+ * @namespace   Table
+ * @version     0.1-dev
+ * @author      Gasoline Development Team
+ * @author      Fuel Development Team
+ * @license     MIT License
+ * @copyright   2013 Gasoline Development Team
+ * @copyright  2010 - 2013 Fuel Development Team
+ * @link        http://hubspace.github.io/fuel-tables
+ */
+
 use ArrayAccess;
 use Countable;
 use Iterator;
@@ -133,7 +147,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      *                                  it will be prepended.
      *                                  Defaults to false i.e., overwrite
      * 
-     * @return  \Table\Group_{group_tag}
+     * @return  \Table\Group
      */
     public function set($attribute, $value = null, $mode = false)
     {
@@ -204,7 +218,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      *                              $value to the classes' attributes.
      *                              Defaults to false
      * 
-     * @return  \Table\Group_{group_tag}
+     * @return  \Table\Group
      */
     public function add($attribute, $value, $prepend = false)
     {
@@ -212,12 +226,39 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     }
     
     
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add a row to the current group
+     * 
+     * @access  public
+     * @see     \Table\Cell
+     * 
+     * @param   array   $values     Array of values to add into the cells of the
+     *                              row.
+     * @param   array   $attributes Attributes to add to the row-opening tag
+     * 
+     * @return  \Table\Row          Returns the just created row-object
+     */
     public function add_row(array $values = array(), array $attributes = array())
     {
         return $this->_rows[] = new Row(str_replace(__CLASS__ . '_', '', get_called_class()), $values, $attributes);
     }
     
     
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Append a cell to the current row
+     * 
+     * @access  public
+     * @see     \Table\Cell
+     * 
+     * @param   string  $value      The value of the cell
+     * @param   array   $attributes Array of html-attributes of the cell
+     * 
+     * @return   \Table\Row
+     */
     public function add_cell($value = '', array $attributes = array())
     {
         $this->_rows OR $this->add_row();
@@ -225,6 +266,20 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
         return end($this->_rows)->add_cell($value, $attributes);
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Add multiple cells at once to the last row
+     * 
+     * @access  public
+     * @see     \Table\Cell
+     * 
+     * @param   array   $values     An array of values or an array of
+     *                              value => attributes.
+     * 
+     * @return   \Table\Group
+     */
     public function add_cells(array $values = array())
     {
         if ( ! $values )
@@ -257,7 +312,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * @param   string  $attribute  The attribute's name to remove
      * @param   string  $value      The value of the attribute to remove
      * 
-     * @return  \Table\Group_{group_tag}
+     * @return  \Table\Group
      */
     public function remove($attribute, $value = null, $purge = false)
     {
@@ -276,7 +331,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @param   string  $attribute  The attribute's name to remove
      * 
-     * @return  \Table\Group_{group_tag}
+     * @return  \Table\Group
      */
     public function clear($attribute)
     {
@@ -353,10 +408,6 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * Countable Interface
      */
     
-    /**
-     * [count description]
-     * @return [type] [description]
-     */
     public function count()
     {
         return count($this->_rows);

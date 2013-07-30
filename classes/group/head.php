@@ -1,32 +1,21 @@
 <?php namespace Table;
 
+/**
+ * Part of the fuel-Table-package
+ *
+ * @package     Table
+ * @namespace   Table
+ * @version     0.1-dev
+ * @author      Gasoline Development Team
+ * @author      Fuel Development Team
+ * @license     MIT License
+ * @copyright   2013 Gasoline Development Team
+ * @copyright  2010 - 2013 Fuel Development Team
+ * @link        http://hubspace.github.io/fuel-tables
+ */
+
 class Group_Head extends Group {
     
     protected $_group_tag = 'thead';
-    
-    // public function set_columns(array $columns = array())
-    // {
-    //     if ( $columns && ! $this instanceof Group_Head )
-    //     {
-    //         throw new BadMethodCallException('Cannot set columns on table-body or table-foot');
-    //     }
-        
-    //     if ( ! $columns )
-    //     {
-    //         $this->_rows = array();
-            
-    //         return $this;
-    //     }
-        
-    //     $this->add_row();
-        
-    //     foreach ( $columns as $k => $column )
-    //     {
-    //         is_array($column) ? ( $value = $k && $attributes = $column) : ( $value = $column && $attributes = array() );
-    //         $this->add_cell($value, $attributes);
-    //     }
-        
-    //     return $this;
-    // }
     
 }

@@ -1,16 +1,17 @@
 <?php
 
 /**
- * Part of the Gasoline framework
+ * Part of the fuel-Table-package
  *
- * @package     Gasoline
+ * @package     Table
  * @namespace   Table
  * @version     0.1-dev
  * @author      Gasoline Development Team
- * @author      Haro "WanWizard" Verton
+ * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @link        http://hubspace.github.io/gasoline
+ * @copyright  2010 - 2013 Fuel Development Team
+ * @link        http://hubspace.github.io/fuel-tables
  */
 
 Autoloader::add_classes(array(
