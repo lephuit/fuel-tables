@@ -83,6 +83,8 @@ abstract class Cell {
             }
         }
         
+        $this->_content OR $this->_content = '';
+        
         return html_tag(
             $this->_cell_tag,
             $this->_attributes,

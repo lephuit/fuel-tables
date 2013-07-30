@@ -358,8 +358,6 @@ class Table implements Countable, Iterator, ArrayAccess {
     {
         try
         {
-            $table = '';
-            
             $head = ( $this->_head ? $this->_head->render() : '' );
             
             $foot = ( $this->_foot ? $this->_foot->render() : '' );
