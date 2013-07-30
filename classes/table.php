@@ -148,6 +148,14 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     protected $_query_opts = array();
     
+    /**
+     * The columns that are set via set_columns and needed to hydrate the table
+     * 
+     * @access  protected
+     * @var     array
+     */
+    protected $_columns = array();
+    
     
     
     
@@ -292,8 +300,11 @@ class Table implements Countable, Iterator, ArrayAccess {
                 // array_diff_assoc($defaults, $options) && $options = array('attributes' => $options);
                 // Merge the given options with the defaults
                 $options = \Arr::merge($defaults, $options);
-                // And extract the column header (if any) otherwise use the key
-                //  of $columns
+                
+                // What key to use to put inside the cells?
+                $options['use'] OR $options['use'] = $column;
+                
+                // What to display in the table header?
                 $options['display'] && $column = $options['display'];
             }
             // $options is no array so we will swich $column and $options
@@ -311,6 +322,10 @@ class Table implements Countable, Iterator, ArrayAccess {
                     $options['attributes']
                 )->sanitize($options['sanitize'])
             );
+            
+            unset($options['attributes']);
+            
+            $this->_columns[] = $options;
         }
         
         // Return the table for chaining
@@ -427,6 +442,8 @@ class Table implements Countable, Iterator, ArrayAccess {
     {
         try
         {
+            $this->hydrate();
+            
             $head = ( $this->_head ? $this->_head->render() : '' );
             
             $foot = ( $this->_foot ? $this->_foot->render() : '' );
@@ -437,7 +454,12 @@ class Table implements Countable, Iterator, ArrayAccess {
         }
         catch ( \Exception $e )
         {
-            return $e->getMessage();
+            if ( \Fuel::$env == \Fuel::DEVELOPMENT )
+            {
+                return $e->getMessage();
+            }
+            
+            throw new \HttpServerErrorException();
         }
     }
     
@@ -451,32 +473,119 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function hydrate()
+    public function hydrate(array $query_opts = array())
     {
-        if ( ! $this->_model )
+        if ( ! $this->_model OR ! $this->_columns )
         {
-            throw new HydrationException('No Model or data set for table');
+            return;
+            
+            throw new HydrationException('No Model or columns set for table');
         }
         
+        // We don't want duplicate data inside the body, so assign a new body
+        //  but keep the old attributes
+        $body_attributes = $this->_body->get('attributes');
+        $body = $this->add_body(array(), $body_attributes);
+        
+        // Are there any query-options given?
+        if ( $query_opts )
+        {
+            // Take care of them
+            foreach ( $query_opts as $query_opt )
+            {
+                $this->query_option($query_opt);
+            }
+        }
+        
+        // Then build our query
         $q = $this->build_query();
         
+        // And get the results
         $results = $q->get();
         
+        // Got none?
         if ( ! $results )
         {
-            $this->_data = array();
+            // Well, then we're done
+            return;
         }
         
-        $data = array();
-        
+        // Loop over the results we gathered
         foreach ( $results as $result )
         {
-            $data[] = $result->to_array();
+            // Convert ORM objects to arrays
+            $data = $result->to_array();
+            
+            // Create a new row for the data
+            $row = $body->add_row();
+            
+            // And loop over the columns we need to set
+            foreach ( $this->_columns as $column )
+            {
+                // Got a column and found a value to put inside the cell?
+                if ( $column['use'] && false !== ( $val = \Arr::get($data, $column['use'], false) ) )
+                {
+                    // Then add it
+                    $row->add_cell($val);
+                }
+                // Otherwise, skip it
+                else
+                {
+                    $row->skip_cell();
+                }
+            }
         }
         
-        \Debug::dump($data);
+        // For chaining
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set custom query option like 'related', 'where', ...
+     * 
+     * @access  public
+     * 
+     * @param   string  $option     The option to set e.g., 'related', 'where', ...
+     * @param   mixed   $value      The option-value to pass along. Must be conform
+     *                              with the respective method of \Orm\Query::$option
+     * 
+     * @return  \Table\Table
+     */
+    public function query_option($option, $value)
+    {
+        $this->_query_opts = \Arr::merge($this->_query_opts, array($option => (array) $value));
         
-        die();
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set multiple custom query options like 'related', 'where', ...
+     * 
+     * @access  public
+     * @see     \Table\Table::query_option()
+     * 
+     * @param   array   $query_option   Array of query options formatted to work
+     *                                  with \Table\Table::query_option()
+     * 
+     * @return  \Table\Table
+     */
+    public function query_options(array $options = array())
+    {
+        if ( $options )
+        {
+            foreach ( $options as $option => $arguments )
+            {
+                $this->query_option($option, $arguments);
+            }
+        }
+        
+        return $this;
     }
     
     
@@ -515,8 +624,31 @@ class Table implements Countable, Iterator, ArrayAccess {
         // Where (i.e., filter) by something?
         array_key_exists('where', $this->_query_opts) && $q->where($this->_query_opts['where']);
         
+        array_key_exists('related', $this->_query_opts) && array_walk($this->_query_opts['related'], function($relation) use ($q) {
+            $q = $q->related($relation);
+        });
+        
         // Done so far, assign it to the storage and return it
         return $this->_query = $q;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Update the internal query e.g., after adding externally some 'related'
+     * 
+     * @access  public
+     * 
+     * @param   \Orm\Query  $query  The updated/modified query
+     * 
+     * @return  \Table\Table
+     */
+    public function set_query(\Orm\Query $query)
+    {
+        $this->_query = $query;
+        
+        return $this;
     }
     
     
