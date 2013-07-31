@@ -156,6 +156,8 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     protected $_columns = array();
     
+    protected $_config = array();
+    
     
     
     
@@ -286,7 +288,7 @@ class Table implements Countable, Iterator, ArrayAccess {
         $defaults = array(
             'attributes'    => array(),
             'use'           => null,
-            'display'       => null,
+            'as'            => null,
             'sanitize'      => false,
         );
         
@@ -305,7 +307,7 @@ class Table implements Countable, Iterator, ArrayAccess {
                 $options['use'] OR $options['use'] = $column;
                 
                 // What to display in the table header?
-                $options['display'] && $column = $options['display'];
+                $options['as'] && $column = $options['as'] OR $column = $options['use'];
             }
             // $options is no array so we will swich $column and $options
             else
@@ -320,7 +322,7 @@ class Table implements Countable, Iterator, ArrayAccess {
                 Cell_Head::forge(
                     $column,
                     $options['attributes']
-                )->sanitize($options['sanitize'])
+                )#->sanitize($options['sanitize'])
             );
             
             unset($options['attributes']);
@@ -349,6 +351,11 @@ class Table implements Countable, Iterator, ArrayAccess {
     public function set_model($model, $hydrate = false)
     {
         $this->_model = $model;
+        
+        if ( $conditions = $model::condition('order_by') )
+        {
+            $this->set_config('sort.default', $conditions);
+        }
         
         $hydrate && $this->hydrate();
         
@@ -475,16 +482,16 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function hydrate(array $query_opts = array())
     {
-        if ( ! $this->_model OR ! $this->_columns )
+        if ( ! ( $this->_model && $this->_columns ) )
         {
-            return;
+            return $this;
             
             throw new HydrationException('No Model or columns set for table');
         }
         
         // We don't want duplicate data inside the body, so assign a new body
-        //  but keep the old attributes
-        $body_attributes = $this->_body->get('attributes');
+        //  but keep the old attributes (if there's an old body)
+        $body_attributes = ( $this->_body ? $this->_body->get('attributes') : array() );
         $body = $this->add_body(array(), $body_attributes);
         
         // Are there any query-options given?
@@ -507,7 +514,7 @@ class Table implements Countable, Iterator, ArrayAccess {
         if ( ! $results )
         {
             // Well, then we're done
-            return;
+            return $this;
         }
         
         // Loop over the results we gathered
@@ -523,10 +530,13 @@ class Table implements Countable, Iterator, ArrayAccess {
             foreach ( $this->_columns as $column )
             {
                 // Got a column and found a value to put inside the cell?
-                if ( $column['use'] && false !== ( $val = \Arr::get($data, $column['use'], false) ) )
+                if ( $column['use'] && null !== ( $val = \Arr::get($data, $column['use'], null) ) )
                 {
-                    // Then add it
-                    $row->add_cell($val);
+                    // Then forge a new cell of type body and also apply the sanitation
+                    $row->add_cell(
+                        Cell_Body::forge($val)
+                        ->sanitize($column['sanitize'])
+                    );
                 }
                 // Otherwise, skip it
                 else
@@ -538,6 +548,128 @@ class Table implements Countable, Iterator, ArrayAccess {
         
         // For chaining
         return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Order the rows of the table by the given property/properties and dirn
+     * 
+     * Internally used on __construct if auto-init is configured true
+     * 
+     * @access  public
+     * 
+     * @param   string|array    $property   The property to sort by or an array
+     *                                      of property => dirn
+     * @param   string          $dirn       The direction to order by. Either 'ASC'
+     *                                      or 'DESC'.  Defaults to 'ASC"'
+     * 
+     * @return  \Table\Table
+     */
+    public function order_by($property, $dirn = 'ASC"')
+    {
+        if ( $property === true )
+        {
+            if ( $order_by = $this->_query_opts_by_config('order_by') )
+            {
+                $this->_query_opts['order_by'] = $order_by;
+            }
+            
+            return $this;
+        }
+        
+        // Taken from \Orm\Query
+        if ( is_array($property) )
+        {
+            foreach ( $property as $p => $d )
+            {
+                if ( is_int($p) )
+                {
+                    is_array($d) ? $this->order_by($d[0], $d[1]) : $this->order_by($d, $direction);
+                }
+                else
+                {
+                    $this->order_by($p, $d);
+                }
+            }
+            
+            return $this;
+        }
+        
+        // Ensure we have the key inside our query-options
+        array_key_exists('order_by', $this->_query_opts) OR $this->_query_opts['order_by'] = array();
+        
+        // Store in our local query-opts
+        $this->_query_opts['order_by'][] = array($property, $dirn);
+        
+        // For chaining
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set or activate the pagination options
+     * 
+     * @access  public
+     * 
+     * @param   bool|int    $limit      The limit to use or true to activate automatic
+     *                                  pagination rendering
+     * @param   int         $offset     The offset to use. If pagewise-pagination
+     *                                  is configure, then $offset is the page,
+     *                                  otherwise it will be a real offset
+     * 
+     * @return  \Table\Table
+     */
+    public function paginate($limit = null, $offset = null)
+    {
+        if ( $limit === true OR ( is_null($limit) && is_null($offset) ) )
+        {
+            extract($this->_query_opts_by_config('paginate'));
+        }
+        
+        $this->limit($limit);
+        $this->offset($offset);
+        
+        $this->set_config('paginate.enabled', true);
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set a manual or modify an existing limit of the results
+     * 
+     * @access  public
+     * 
+     * @param   int     $limit      The limit to use
+     * 
+     * @return  \Table\Table
+     */
+    public function limit($limit)
+    {
+        return $this->query_option('limit', $limit);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set an option or modify a previously set offset
+     * 
+     * @access  public
+     * 
+     * @param   int     $offset     The offset to use
+     * 
+     * @return  \Table\Table
+     */
+    public function offset($offset = 0)
+    {
+        return $this->query_option('offset', $offset);
     }
     
     
@@ -556,7 +688,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function query_option($option, $value)
     {
-        $this->_query_opts = \Arr::merge($this->_query_opts, array($option => (array) $value));
+        $this->_query_opts = \Arr::merge($this->_query_opts, array($option => $value));
         
         return $this;
     }
@@ -624,6 +756,7 @@ class Table implements Countable, Iterator, ArrayAccess {
         // Where (i.e., filter) by something?
         array_key_exists('where', $this->_query_opts) && $q->where($this->_query_opts['where']);
         
+        // Related models, too?
         array_key_exists('related', $this->_query_opts) && array_walk($this->_query_opts['related'], function($relation) use ($q) {
             $q = $q->related($relation);
         });
@@ -644,11 +777,113 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function set_query(\Orm\Query $query)
+    public function use_query(\Orm\Query $query)
     {
         $this->_query = $query;
         
         return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Allows for setting a config like the pagination options or anything else
+     * 
+     * @access  public
+     * @see     \Arr::set
+     * 
+     * @param   string  $key        The key of the option to set
+     * @param   mixed   $value      The value to set for $key
+     * 
+     * @return  \Table\Table
+     */
+    public function set_config($key, $value = null)
+    {
+        \Arr::set($this->_config, $key, $value);
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get configuration for table like pagination, ordering, ...
+     * 
+     * @access  public
+     * 
+     * @param   string  $key        The key of the config array to get
+     * @param   mixed   $default    The default value to return if $key cannot
+     *                              be found
+     * 
+     * @return  mixed   Returns the config value of $key, or $default if not found
+     */
+    public function get_config($key, $default = null)
+    {
+        return \Arr::get($this->_config, $key, $default);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get query-options from the table configuration
+     * 
+     * @access  protected
+     * 
+     * @param   string  $key    The key to get e.g., 'order_by', 'filter', 'paginate'
+     * 
+     * @return  array           Returns the array formatted properly for usage in
+     *                          $this->_query_opts
+     */
+    protected function _query_opts_by_config($key)
+    {
+        $config = array();
+        
+        switch ( $key )
+        {
+            case 'order_by':
+                $default_sort = $this->get_config('sort.default');
+                
+                $cols = call_user_func(array('Input', $this->get_config('sort.method', 'get')), $this->get_config('sort.key.field', 'sort'), null);
+                $dirns = call_user_func(array('Input', $this->get_config('sort.method', 'get')), $this->get_config('sort.key.dirn', 'dirn'), null);
+                
+                if ( $cols )
+                {
+                    $cols = explode('|', $cols);
+                    $dirns = $dirns ? explode('|', $dirns) : array('asc');
+                    
+                    if ( count($dirns) == 1 )
+                    {
+                        $dirns = array_fill(0, count($cols), reset($dirns));
+                    }
+                    
+                    foreach ( $cols as $k => $col )
+                    {
+                        $config[] = array($col, $dirns[$k]);
+                    }
+                }
+                elseif ( $default_sort )
+                {
+                    $config = $default_sort;
+                }
+            break;
+            case 'paginate':
+                $default_limit = $this->get_config('paginate.limit', 25);
+                $default_offset = $this->get_config('paginate.offset', 0);
+                
+                $offset = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.offset', 'offset'), $default_offset);
+                $limit = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.limit', 'limit'), $default_limit);
+                
+                $config = array('limit' => $limit, 'offset' => $offset);
+            break;
+            default:
+                throw new InvalidArgumentException('Config-key to get must be a valid one, [' . $key . '] given');
+            break;
+        }
+        
+        return $config;
     }
     
     
