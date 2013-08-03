@@ -32,6 +32,10 @@ abstract class Cell {
      */
     protected $_content = '';
     
+    const BODY = 'Body';
+    const HEAD = 'Head';
+    const FOOT = 'Foot';
+    
     
     protected $_sanitizers = array();
     
@@ -50,9 +54,11 @@ abstract class Cell {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{cell_tag}>'
      */
-    public static function forge($content, array $attributes = array())
+    public static function forge($type = Cell::BODY, $content, array $attributes = array())
     {
-        return new static($content, $attributes);
+        $class = 'Table\\Cell_' . ucwords($type);
+        
+        return new $class($content, $attributes);
     }
     
     

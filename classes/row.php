@@ -320,7 +320,7 @@ class Row implements ArrayAccess, Countable, Iterator {
     {
         $class = 'Table\\Cell_' . $this->_type;
         
-        $cell = ( $value instanceof $class ? $value : new $class($value, $attributes) );
+        $cell = ( $value instanceof $class ? $value : Cell::forge($this->_type, $value, $attributes) );
         
         $this->_cells[] =& $cell;
         

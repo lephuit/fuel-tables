@@ -319,7 +319,8 @@ class Table implements Countable, Iterator, ArrayAccess {
             // And add a new cell to the head by calling Cell_Head::forge() so
             //  we can chain to sanitize() as well
             $this->_head->add_cell(
-                Cell_Head::forge(
+                Cell::forge(
+                    Cell::HEAD,
                     $column,
                     $options['attributes']
                 )#->sanitize($options['sanitize'])
@@ -378,7 +379,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_head(array $columns = array(), array $attributes = array())
     {
-        return $this->_head = Group_Head::forge($columns, $attributes);
+        return $this->_head = Group::forge(Group::HEAD, $columns, $attributes);
     }
     
     
@@ -395,7 +396,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_foot(array $attributes = array())
     {
-        return $this->_foot = Group_Foot::forge(array(), $attributes);
+        return $this->_foot = Group::forge(Group::FOOT, array(), $attributes);
     }
     
     
@@ -412,7 +413,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_body(array $attributes = array())
     {
-        return $this->_body = Group_Body::forge(array(), $attributes);
+        return $this->_body = Group::forge(Group::BODY, array(), $attributes);
     }
     
     
@@ -480,13 +481,38 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function hydrate(array $query_opts = array())
+    public function hydrate(array $data = array())
     {
-        if ( ! ( $this->_model && $this->_columns ) )
+        if ( ! $data )
         {
-            return $this;
+            if ( ! ( $this->_model && $this->_columns ) )
+            {
+                return $this;
+                
+                throw new HydrationException('No Model or columns set for table');
+            }
             
-            throw new HydrationException('No Model or columns set for table');
+            // Then build our query
+            $q = $this->build_query();
+            
+            // And get the results
+            $results = $q->get();
+            
+            // Got none?
+            if ( ! $results )
+            {
+                // Well, then we're done
+                return $this;
+            }
+            
+            $data = array();
+            
+            // Loop over the results we gathered
+            foreach ( $results as $result )
+            {
+                // Convert ORM objects to arrays
+                $data[] = $result->to_array();
+            }
         }
         
         // We don't want duplicate data inside the body, so assign a new body
@@ -494,35 +520,8 @@ class Table implements Countable, Iterator, ArrayAccess {
         $body_attributes = ( $this->_body ? $this->_body->get('attributes') : array() );
         $body = $this->add_body(array(), $body_attributes);
         
-        // Are there any query-options given?
-        if ( $query_opts )
+        foreach ( $data as $_data )
         {
-            // Take care of them
-            foreach ( $query_opts as $query_opt )
-            {
-                $this->query_option($query_opt);
-            }
-        }
-        
-        // Then build our query
-        $q = $this->build_query();
-        
-        // And get the results
-        $results = $q->get();
-        
-        // Got none?
-        if ( ! $results )
-        {
-            // Well, then we're done
-            return $this;
-        }
-        
-        // Loop over the results we gathered
-        foreach ( $results as $result )
-        {
-            // Convert ORM objects to arrays
-            $data = $result->to_array();
-            
             // Create a new row for the data
             $row = $body->add_row();
             
@@ -530,11 +529,11 @@ class Table implements Countable, Iterator, ArrayAccess {
             foreach ( $this->_columns as $column )
             {
                 // Got a column and found a value to put inside the cell?
-                if ( $column['use'] && null !== ( $val = \Arr::get($data, $column['use'], null) ) )
+                if ( $column['use'] && null !== ( $val = \Arr::get($_data, $column['use'], null) ) )
                 {
-                    // Then forge a new cell of type body and also apply the sanitation
+                    // Then forge a new cell of type 'body' and also apply the sanitation
                     $row->add_cell(
-                        Cell_Body::forge($val)
+                        Cell::forge(Cell::BODY, $val)
                         ->sanitize($column['sanitize'])
                     );
                 }
@@ -870,11 +869,14 @@ class Table implements Countable, Iterator, ArrayAccess {
                 }
             break;
             case 'paginate':
-                $default_limit = $this->get_config('paginate.limit', 25);
                 $default_offset = $this->get_config('paginate.offset', 0);
+                $default_limit  = $this->get_config('paginate.limit', 25);
                 
                 $offset = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.offset', 'offset'), $default_offset);
                 $limit = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.limit', 'limit'), $default_limit);
+                
+                ( (int) $offset === intval($offset) && $offset > 0 ) OR $offset = $default_offset;
+                ( (int) $limit === intval($limit) && $limit > 0 ) OR $limit = $default_limit;
                 
                 $config = array('limit' => $limit, 'offset' => $offset);
             break;

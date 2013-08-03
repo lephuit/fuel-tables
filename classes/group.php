@@ -54,6 +54,10 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     protected $_curr_row = 0;
     
+    const BODY = 'Body';
+    const FOOT = 'Foot';
+    const HEAD = 'Head';
+    
     
     
     
@@ -69,9 +73,11 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{group_tag}>'
      */
-    public static function forge(array $columns = array(), array $attributes = array())
+    public static function forge($type = Group::BODY, array $columns = array(), array $attributes = array())
     {
-        return new static($columns, $attributes);
+        $class = 'Table\\Group_' . ucwords($type);
+        
+        return new $class($columns, $attributes);
     }
     
     
