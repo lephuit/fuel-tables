@@ -341,7 +341,6 @@ class Table implements ArrayAccess, Countable, Iterator {
             //  to be the value to display
             else
             {
-                $identifier 
                 $column = $options;
                 $options = $defaults;
             }
