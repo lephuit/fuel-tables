@@ -111,6 +111,8 @@ abstract class Cell {
      */
     public function render()
     {
+        $this->_content = Helpers::result($this->_content);
+        
         $content = (
             $this->_content
                 ? ( $this->_sanitizer

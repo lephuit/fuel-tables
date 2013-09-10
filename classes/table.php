@@ -332,10 +332,10 @@ class Table implements ArrayAccess, Countable, Iterator {
                 $heading = \Arr::merge($defaults, $heading);
                 
                 // What key to use to put inside the cells?
-                $heading['use'] OR $heading['use'] = $column;
+                $options['use'] OR $options['use'] = $column && $column = null;
                 
                 // What to display in the table header?
-                $heading['as'] && $column = $heading['as'] OR $column = $heading['use'];
+                $options['as'] && $column = \Lang::get($options['as'], array(), $options['as']);
             }
             // $options is no array so we assume $column to be the identifier and $options
             //  to be the value to display
