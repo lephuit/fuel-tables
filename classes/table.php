@@ -10,23 +10,33 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
+use ArrayAccess;
 use Countable;
 use Iterator;
-use ArrayAccess;
 
-class Table implements Countable, Iterator, ArrayAccess {
+class Table implements ArrayAccess, Countable, Iterator {
     
     /**
      * Storage for all table-instances
      * 
      * @access  protected
+     * @static
      * @var     array
      */
     protected static $_instances = array();
+    
+    /**
+     * Keeps the active table instance
+     * 
+     * @access  protected
+     * @static
+     * @var     \Table\Table
+     */
+    protected static $_instance = null;
     
     
     
@@ -46,10 +56,17 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public static function forge(array $attributes = array())
+    public static function forge($name = 'default', array $attributes = array(), array $headers = array())
     {
-        // Return a new \Table\Table-object
-        return new static($attributes);
+        // New instance?
+        if ( ! isset(static::$_instances[$name]) )
+        {
+            // Then forge it and make it the active instance
+            static::$_instances[$name] = new static($attributes, $headers);
+        }
+        
+        // And return it
+        return static::$_instance = static::$_instances[$name];
     }
     
     
@@ -68,15 +85,25 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public static function instance($name = '_default_')
     {
-        // New instance?
-        if ( ! isset(static::$_instances[$name]) )
-        {
-            // Then forge it
-            static::$_instances[$name] = static::forge();
-        }
-        
-        // And return it
-        return static::$_instances[$name];
+        // Return an instance that was forged or found within the previously forged
+        //  instances
+        return static::forge($name);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Return the active table instance
+     * 
+     * @access  public
+     * @static
+     * 
+     * @return  \Table\Table
+     */
+    public static function active()
+    {
+        return static::$_instance ? : static::instance();
     }
     
     
@@ -114,15 +141,15 @@ class Table implements Countable, Iterator, ArrayAccess {
      * @access  protected
      * @var     \Table\Group_foot
      */
-    protected $_foot = null;
+    protected $_footer = null;
     
     /**
-     * The table's head-object
+     * The table's header-object
      * 
      * @access  protected
-     * @var     \Table\Group_head
+     * @var     \Table\Group_Header
      */
-    protected $_head = null;
+    protected $_header = null;
     
     /**
      * Stores the namespace model-name for getting the data
@@ -130,7 +157,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * @access  protected
      * @var     string
      */
-    protected $_model = null;
+    // protected $_model = null;
     
     /**
      * Keeps the query used to get data from the DB
@@ -138,7 +165,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * @access  protected
      * @var     \Orm\Query
      */
-    protected $_query = null;
+    // protected $_query = null;
     
     /**
      * Keeps the query options like 'limit', 'offset', 'order_by'
@@ -146,7 +173,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * @access  protected
      * @var     array
      */
-    protected $_query_opts = array();
+    // protected $_query_opts = array();
     
     /**
      * The columns that are set via set_columns and needed to hydrate the table
@@ -154,8 +181,14 @@ class Table implements Countable, Iterator, ArrayAccess {
      * @access  protected
      * @var     array
      */
-    protected $_columns = array();
+    // protected $_columns = array();
     
+    /**
+     * Configuration for the table-instance
+     * 
+     * @access  protected
+     * @var     array
+     */
     protected $_config = array();
     
     
@@ -171,9 +204,13 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @param   array   $attributes     The attributes to set for the table
      */
-    public function __construct(array $attributes = array())
+    public function __construct(array $attributes = array(), array $headers = array())
     {
-        $this->_attributes = $attributes;
+        // Set the attributes, if given
+        $attributes && $this->_attributes = $attributes;
+        
+        // Set the headers, if given
+        $headers && $this->headers($headers);
     }
     
     
@@ -182,49 +219,17 @@ class Table implements Countable, Iterator, ArrayAccess {
     /**
      * Get some property of the table
      * 
-     * Can be either 'head', 'foot', 'body', 'row', 'row_N', or an attribute
-     *  name e.g., 'class'
-     * 
-     * @param   string  $property   The name of the property to get. Can be 'head',
-     *                              'foot', 'row', 'row_N', or any key of the
-     *                              table's attributes array
+     * @param   string  $property   The name of the property to get.
      * @param   mixed   $default    The default value to return if the attribute
-     *                              cannot be found. If $property is 'row', then
-     *                              $default must be the number of the row to return.
-     *                              If omitted, the last row will be returned.
-     *                              Defaults to null
-     * @return  mixed               Returns the property that matched or the
-     *                              head|foot|Body|Row-object
+     *                              cannot be found.  Defaults to null
+     * @return  mixed               Returns the property that matched $default it
+     *                              property was not found
      */
     public function get($property, $default = null)
     {
-        // Match magic properties head, foot, body
-        if ( preg_match('/head|foot|body/', $property) )
-        {
-            if ( ! isset($this->{'_'.$property}) )
-            {
-                return $this->{'add_' . $property}();
-                
-                // throw new \OutOfBoundsException('Cannot get [' . $property . '] for table if it has not been created yet');
-            }
-            
-            return $this->{'_'.$property};
-        }
-        // Match magic property 'row' or 'row_N'
-        elseif ( 0 === strpos($property, 'row') )
-        {
-            // Either $property == 'row_4' OR 'row', if it's 'row', then the
-            //  offset is (unfortunately) given in $default
-            $offset = ( false !== strpos('row_', $property) ? substr($property, 4) : ( $default ? : count($this->_rows) - 1 ) );
-            
-            // And use the implemented ArrayAccess-Interface to return the requested
-            //  row
-            return $this[$offset];
-        }
-        
         // No magic property, so we will return the matching attribute (if it exists)
         //  otherwise $default
-        return isset($this->_attributes[$property]) ? $this->_attributes[$property] : $default;
+        return \Arr::get($this->_attributes, $property, $default);
     }
     
     
@@ -245,6 +250,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function set($property, $value = null, $append = false)
     {
+        // Allow setting all attributes at once
         if ( $property === 'attributes' )
         {
             if ( ! is_array($value) )
@@ -253,16 +259,38 @@ class Table implements Countable, Iterator, ArrayAccess {
             }
             
             $this->_attributes = $value;
+            
+            return $this;
         }
-        else
-        {
-            // Append it? Then use our helper to add the attribute, otherwise just overwrite it
-            $append === true && Helpers::add_attribute($this->_attributes, $property, $value) OR $this->_attributes[$property] = $value;
-        }
+        
         // Append it? Then use our helper to add the attribute, otherwise just overwrite it
         $append === true && Helpers::add_attribute($this->_attributes, $property, $value) OR $this->_attributes[$property] = $value;
         
         // Return for chaining
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Remove a specific attribute value or all values for the given attribute
+     * 
+     * For example, if the table's class were to be 'table table-bordered table-zebra',
+     *  $table->remove('class', 'table-zebra') would only remove 'table-zebra' form
+     *  the class. $table->remove('class') would remove the 'class'-property from
+     *  the attributes array
+     * 
+     * @param   string      $property   The property to manipulate
+     * @param   string|null $value      Desired value to remove form the property
+     *                                  or null to purge the whole property
+     * 
+     * @return  \Table\Table            Returns the table-object for chaining
+     */
+    public function remove($property, $value = null)
+    {
+        Helpers::remove_attribute($this->_attributes, $property, $value);
+        
         return $this;
     }
     
@@ -277,12 +305,12 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @param   array   $columns    Array of column names or an advanced array
      * 
-     * @return  \Table\Group_Head
+     * @return  \Table\Group_Header
      */
-    public function set_columns(array $columns = array())
+    public function headers(array $columns = array())
     {
-        // We need to have a head-group or we will forge one
-        $this->_head OR $this->add_head();
+        // We need to have a head-group
+        $this->add_header();
         
         // The default options we accept for a column
         $defaults = array(
@@ -293,34 +321,36 @@ class Table implements Countable, Iterator, ArrayAccess {
         );
         
         // Loop over the given columns to add them
-        foreach ( $columns as $column => $options )
+        foreach ( $columns as $identifier => $heading )
         {
             // Got an array for the options?
-            if ( is_array($options) )
+            if ( is_array($heading) )
             {
                 // Does it contain any of the keys from $defaults? Then 
                 // array_diff_assoc($defaults, $options) && $options = array('attributes' => $options);
                 // Merge the given options with the defaults
-                $options = \Arr::merge($defaults, $options);
+                $heading = \Arr::merge($defaults, $heading);
                 
                 // What key to use to put inside the cells?
-                $options['use'] OR $options['use'] = $column;
+                $heading['use'] OR $heading['use'] = $column;
                 
                 // What to display in the table header?
-                $options['as'] && $column = $options['as'] OR $column = $options['use'];
+                $heading['as'] && $column = $heading['as'] OR $column = $heading['use'];
             }
-            // $options is no array so we will swich $column and $options
+            // $options is no array so we assume $column to be the identifier and $options
+            //  to be the value to display
             else
             {
+                $identifier 
                 $column = $options;
                 $options = $defaults;
             }
             
-            // And add a new cell to the head by calling Cell_Head::forge() so
+            // And add a new cell to the header by calling Cell_Header::forge() so
             //  we can chain to sanitize() as well
-            $this->_head->add_cell(
+            $this->_header->add_cell(
                 Cell::forge(
-                    Cell::HEAD,
+                    Cell::HEADER,
                     $column,
                     $options['attributes']
                 )#->sanitize($options['sanitize'])
@@ -370,16 +400,35 @@ class Table implements Countable, Iterator, ArrayAccess {
      * Add a header to the table and return the header-object
      * 
      * @access  public
-     * @see     \Table\Group_Head::set_columns()
+     * @see     \Table\Group_Header::set_columns()
      * 
      * @param   array   $columns    The columns to use for the header
      * @param   array   $attributes Attributes to pass to the header
      * 
-     * @return  \Table\Group_Head
+     * @return  \Table\Group_Header
      */
-    public function add_head(array $columns = array(), array $attributes = array())
+    public function add_header(array $columns = array(), array $attributes = array())
     {
-        return $this->_head = Group::forge(Group::HEAD, $columns, $attributes);
+        $this->_header OR $this->_header = Group::forge(Group::HEADER, $columns, $attributes);
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get the table's head object
+     * 
+     * @access  public
+     * 
+     * @return  \Table\Group\Header
+     */
+    public function & get_header()
+    {
+        $this->add_header;
+        
+        return $this->_header;
     }
     
     
@@ -392,11 +441,30 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @param   array   $attributes Attributes to pass to the footer
      * 
-     * @return  \Table\Group_Foot
+     * @return  \Table\Group_Footer
      */
-    public function add_foot(array $attributes = array())
+    public function add_footer(array $attributes = array())
     {
-        return $this->_foot = Group::forge(Group::FOOT, array(), $attributes);
+        $this->_footer OR $this->_footer = Group::forge(Group::FOOTER, array(), $attributes);
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get the table's foot object
+     * 
+     * @access  public
+     * 
+     * @return  \Table\Group_Footer
+     */
+    public function & get_footer()
+    {
+        $this->add_footer();
+        
+        return $this->_footer;
     }
     
     
@@ -413,7 +481,26 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function add_body(array $attributes = array())
     {
-        return $this->_body = Group::forge(Group::BODY, array(), $attributes);
+        $this->_body OR $this->_body = Group::forge(Group::BODY, array(), $attributes);
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get the table's body object
+     * 
+     * @access  public
+     * 
+     * @return  \Table\Group\Body
+     */
+    public function & get_body()
+    {
+        $this->add_body();
+        
+        return $this->_body;
     }
     
     
@@ -426,11 +513,9 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Group_Body
      */
-    public function add_row(array $columns = array())
+    public function add_row(array $columns = array(), array $attributes = array())
     {
-        $this->_body OR $this->add_body();
-        
-        $this->_body->add_row($columns);
+        $this->get_body()->add_row($columns, $attributes);
         
         return $this;
     }
@@ -452,13 +537,13 @@ class Table implements Countable, Iterator, ArrayAccess {
         {
             $this->hydrate();
             
-            $head = ( $this->_head ? $this->_head->render() : '' );
+            $header = ( $this->_header ? $this->_header->render() . PHP_EOL : '' );
             
-            $foot = ( $this->_foot ? $this->_foot->render() : '' );
+            $footer = ( $this->_footer ? $this->_foot->render() . PHP_EOL : '' );
             
-            $body = ( $this->_body ? $this->_body->render() : '' );
+            $body = ( $this->_body ? $this->_body->render() . PHP_EOL : '' );
             
-            return html_tag('table', $this->_attributes, $head . PHP_EOL . $foot . PHP_EOL . $body);
+            return html_tag('table', $this->_attributes, $header . $footer . $body);
         }
         catch ( \Exception $e )
         {
@@ -483,42 +568,10 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function hydrate(array $data = array())
     {
-        if ( ! $data )
-        {
-            if ( ! ( $this->_model && $this->_columns ) )
-            {
-                return $this;
-                
-                throw new HydrationException('No Model or columns set for table');
-            }
-            
-            // Then build our query
-            $q = $this->build_query();
-            
-            // And get the results
-            $results = $q->get();
-            
-            // Got none?
-            if ( ! $results )
-            {
-                // Well, then we're done
-                return $this;
-            }
-            
-            $data = array();
-            
-            // Loop over the results we gathered
-            foreach ( $results as $result )
-            {
-                // Convert ORM objects to arrays
-                $data[] = $result->to_array();
-            }
-        }
-        
         // We don't want duplicate data inside the body, so assign a new body
         //  but keep the old attributes (if there's an old body)
         $body_attributes = ( $this->_body ? $this->_body->get('attributes') : array() );
-        $body = $this->add_body(array(), $body_attributes);
+        $body = $this->add_body($body_attributes);
         
         foreach ( $data as $_data )
         {
@@ -566,45 +619,45 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function order_by($property, $dirn = 'ASC"')
-    {
-        if ( $property === true )
-        {
-            if ( $order_by = $this->_query_opts_by_config('order_by') )
-            {
-                $this->_query_opts['order_by'] = $order_by;
-            }
+    // public function order_by($property, $dirn = 'ASC"')
+    // {
+    //     if ( $property === true )
+    //     {
+    //         if ( $order_by = $this->_query_opts_by_config('order_by') )
+    //         {
+    //             $this->_query_opts['order_by'] = $order_by;
+    //         }
             
-            return $this;
-        }
+    //         return $this;
+    //     }
         
-        // Taken from \Orm\Query
-        if ( is_array($property) )
-        {
-            foreach ( $property as $p => $d )
-            {
-                if ( is_int($p) )
-                {
-                    is_array($d) ? $this->order_by($d[0], $d[1]) : $this->order_by($d, $direction);
-                }
-                else
-                {
-                    $this->order_by($p, $d);
-                }
-            }
+    //     // Taken from \Orm\Query
+    //     if ( is_array($property) )
+    //     {
+    //         foreach ( $property as $p => $d )
+    //         {
+    //             if ( is_int($p) )
+    //             {
+    //                 is_array($d) ? $this->order_by($d[0], $d[1]) : $this->order_by($d, $direction);
+    //             }
+    //             else
+    //             {
+    //                 $this->order_by($p, $d);
+    //             }
+    //         }
             
-            return $this;
-        }
+    //         return $this;
+    //     }
         
-        // Ensure we have the key inside our query-options
-        array_key_exists('order_by', $this->_query_opts) OR $this->_query_opts['order_by'] = array();
+    //     // Ensure we have the key inside our query-options
+    //     array_key_exists('order_by', $this->_query_opts) OR $this->_query_opts['order_by'] = array();
         
-        // Store in our local query-opts
-        $this->_query_opts['order_by'][] = array($property, $dirn);
+    //     // Store in our local query-opts
+    //     $this->_query_opts['order_by'][] = array($property, $dirn);
         
-        // For chaining
-        return $this;
-    }
+    //     // For chaining
+    //     return $this;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -622,20 +675,20 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function paginate($limit = null, $offset = null)
-    {
-        if ( $limit === true OR ( is_null($limit) && is_null($offset) ) )
-        {
-            extract($this->_query_opts_by_config('paginate'));
-        }
+    // public function paginate($limit = null, $offset = null)
+    // {
+    //     if ( $limit === true OR ( is_null($limit) && is_null($offset) ) )
+    //     {
+    //         extract($this->_query_opts_by_config('paginate'));
+    //     }
         
-        $this->limit($limit);
-        $this->offset($offset);
+    //     $this->limit($limit);
+    //     $this->offset($offset);
         
-        $this->set_config('paginate.enabled', true);
+    //     $this->set_config('paginate.enabled', true);
         
-        return $this;
-    }
+    //     return $this;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -649,10 +702,10 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function limit($limit)
-    {
-        return $this->query_option('limit', $limit);
-    }
+    // public function limit($limit)
+    // {
+    //     return $this->query_option('limit', $limit);
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -666,10 +719,10 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function offset($offset = 0)
-    {
-        return $this->query_option('offset', $offset);
-    }
+    // public function offset($offset = 0)
+    // {
+    //     return $this->query_option('offset', $offset);
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -685,12 +738,12 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function query_option($option, $value)
-    {
-        $this->_query_opts = \Arr::merge($this->_query_opts, array($option => $value));
+    // public function query_option($option, $value)
+    // {
+    //     $this->_query_opts = \Arr::merge($this->_query_opts, array($option => $value));
         
-        return $this;
-    }
+    //     return $this;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -706,18 +759,18 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function query_options(array $options = array())
-    {
-        if ( $options )
-        {
-            foreach ( $options as $option => $arguments )
-            {
-                $this->query_option($option, $arguments);
-            }
-        }
+    // public function query_options(array $options = array())
+    // {
+    //     if ( $options )
+    //     {
+    //         foreach ( $options as $option => $arguments )
+    //         {
+    //             $this->query_option($option, $arguments);
+    //         }
+    //     }
         
-        return $this;
-    }
+    //     return $this;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -731,38 +784,38 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Orm\Query
      */
-    public function build_query()
-    {
-        // Already built a query?
-        if ( $this->_query )
-        {
-            // Return it
-            return $this->_query;
-        }
+    // public function build_query()
+    // {
+    //     // Already built a query?
+    //     if ( $this->_query )
+    //     {
+    //         // Return it
+    //         return $this->_query;
+    //     }
         
-        // Create the query
-        $q = call_user_func(array($this->_model, 'query'));
+    //     // Create the query
+    //     $q = call_user_func(array($this->_model, 'query'));
         
-        // Order by something?
-        array_key_exists('order_by', $this->_query_opts) && $q->order_by($this->_query_opts['order_by']);
+    //     // Order by something?
+    //     array_key_exists('order_by', $this->_query_opts) && $q->order_by($this->_query_opts['order_by']);
         
-        // Limit by something?
-        array_key_exists('limit', $this->_query_opts) && $q->limit($this->_query_opts['limit']);
+    //     // Limit by something?
+    //     array_key_exists('limit', $this->_query_opts) && $q->limit($this->_query_opts['limit']);
         
-        // Offset by something?
-        array_key_exists('offset', $this->_query_opts) && $q->offset($this->_query_opts['offset']);
+    //     // Offset by something?
+    //     array_key_exists('offset', $this->_query_opts) && $q->offset($this->_query_opts['offset']);
         
-        // Where (i.e., filter) by something?
-        array_key_exists('where', $this->_query_opts) && $q->where($this->_query_opts['where']);
+    //     // Where (i.e., filter) by something?
+    //     array_key_exists('where', $this->_query_opts) && $q->where($this->_query_opts['where']);
         
-        // Related models, too?
-        array_key_exists('related', $this->_query_opts) && array_walk($this->_query_opts['related'], function($relation) use ($q) {
-            $q = $q->related($relation);
-        });
+    //     // Related models, too?
+    //     array_key_exists('related', $this->_query_opts) && array_walk($this->_query_opts['related'], function($relation) use ($q) {
+    //         $q = $q->related($relation);
+    //     });
         
-        // Done so far, assign it to the storage and return it
-        return $this->_query = $q;
-    }
+    //     // Done so far, assign it to the storage and return it
+    //     return $this->_query = $q;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -776,12 +829,12 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function use_query(\Orm\Query $query)
-    {
-        $this->_query = $query;
+    // public function use_query(\Orm\Query $query)
+    // {
+    //     $this->_query = $query;
         
-        return $this;
-    }
+    //     return $this;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -797,12 +850,12 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  \Table\Table
      */
-    public function set_config($key, $value = null)
-    {
-        \Arr::set($this->_config, $key, $value);
+    // public function set_config($key, $value = null)
+    // {
+    //     \Arr::set($this->_config, $key, $value);
         
-        return $this;
-    }
+    //     return $this;
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -818,10 +871,10 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  mixed   Returns the config value of $key, or $default if not found
      */
-    public function get_config($key, $default = null)
-    {
-        return \Arr::get($this->_config, $key, $default);
-    }
+    // public function get_config($key, $default = null)
+    // {
+    //     return \Arr::get($this->_config, $key, $default);
+    // }
     
     
     //--------------------------------------------------------------------------
@@ -836,57 +889,57 @@ class Table implements Countable, Iterator, ArrayAccess {
      * @return  array           Returns the array formatted properly for usage in
      *                          $this->_query_opts
      */
-    protected function _query_opts_by_config($key)
-    {
-        $config = array();
+    // protected function _query_opts_by_config($key)
+    // {
+    //     $config = array();
         
-        switch ( $key )
-        {
-            case 'order_by':
-                $default_sort = $this->get_config('sort.default');
+    //     switch ( $key )
+    //     {
+    //         case 'order_by':
+    //             $default_sort = $this->get_config('sort.default');
                 
-                $cols = call_user_func(array('Input', $this->get_config('sort.method', 'get')), $this->get_config('sort.key.field', 'sort'), null);
-                $dirns = call_user_func(array('Input', $this->get_config('sort.method', 'get')), $this->get_config('sort.key.dirn', 'dirn'), null);
+    //             $cols = call_user_func(array('Input', $this->get_config('sort.method', 'get')), $this->get_config('sort.key.field', 'sort'), null);
+    //             $dirns = call_user_func(array('Input', $this->get_config('sort.method', 'get')), $this->get_config('sort.key.dirn', 'dirn'), null);
                 
-                if ( $cols )
-                {
-                    $cols = explode('|', $cols);
-                    $dirns = $dirns ? explode('|', $dirns) : array('asc');
+    //             if ( $cols )
+    //             {
+    //                 $cols = explode('|', $cols);
+    //                 $dirns = $dirns ? explode('|', $dirns) : array('asc');
                     
-                    if ( count($dirns) == 1 )
-                    {
-                        $dirns = array_fill(0, count($cols), reset($dirns));
-                    }
+    //                 if ( count($dirns) == 1 )
+    //                 {
+    //                     $dirns = array_fill(0, count($cols), reset($dirns));
+    //                 }
                     
-                    foreach ( $cols as $k => $col )
-                    {
-                        $config[] = array($col, $dirns[$k]);
-                    }
-                }
-                elseif ( $default_sort )
-                {
-                    $config = $default_sort;
-                }
-            break;
-            case 'paginate':
-                $default_offset = $this->get_config('paginate.offset', 0);
-                $default_limit  = $this->get_config('paginate.limit', 25);
+    //                 foreach ( $cols as $k => $col )
+    //                 {
+    //                     $config[] = array($col, $dirns[$k]);
+    //                 }
+    //             }
+    //             elseif ( $default_sort )
+    //             {
+    //                 $config = $default_sort;
+    //             }
+    //         break;
+    //         case 'paginate':
+    //             $default_offset = $this->get_config('paginate.offset', 0);
+    //             $default_limit  = $this->get_config('paginate.limit', 25);
                 
-                $offset = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.offset', 'offset'), $default_offset);
-                $limit = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.limit', 'limit'), $default_limit);
+    //             $offset = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.offset', 'offset'), $default_offset);
+    //             $limit = call_user_func(array('Input', $this->get_config('paginate.method', 'get')), $this->get_config('paginate.key.limit', 'limit'), $default_limit);
                 
-                ( (int) $offset === intval($offset) && $offset > 0 ) OR $offset = $default_offset;
-                ( (int) $limit === intval($limit) && $limit > 0 ) OR $limit = $default_limit;
+    //             ( (int) $offset === intval($offset) && $offset > 0 ) OR $offset = $default_offset;
+    //             ( (int) $limit === intval($limit) && $limit > 0 ) OR $limit = $default_limit;
                 
-                $config = array('limit' => $limit, 'offset' => $offset);
-            break;
-            default:
-                throw new InvalidArgumentException('Config-key to get must be a valid one, [' . $key . '] given');
-            break;
-        }
+    //             $config = array('limit' => $limit, 'offset' => $offset);
+    //         break;
+    //         default:
+    //             throw new InvalidArgumentException('Config-key to get must be a valid one, [' . $key . '] given');
+    //         break;
+    //     }
         
-        return $config;
-    }
+    //     return $config;
+    // }
     
     
     
@@ -899,7 +952,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * Allows setting properties of the table directly. It can be any of the magic
      *  keywords 'head', 'foot', 'row' which takes the same arguments as the
-     *  respective set_head(), set_foot(), add_row() methods. If $property is
+     *  respective set_header(), set_foot(), add_row() methods. If $property is
      *  non of these reserved keywords, it will be set as an attribute of the
      *  table
      * 
@@ -910,19 +963,19 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function __set($property, $value = null)
     {
-        // If the property to-set is 'head', 'foot', or 'row', we allow
-        //  "magic" methods
-        if ( preg_match('/head|foot|body|row/', $property) )
-        {
-            // Set a row? Then add a row, otherwise set either 'head' or 'foot',
-            //  all by calling the respective methods
-            $property == 'row' && call_user_func(array($this, 'add_row'), $value) OR call_user_func(array($this, 'set_' . $property), $value);
-        }
+        // // If the property to-set is 'head', 'foot', or 'row', we allow
+        // //  "magic" methods
+        // if ( preg_match('/head|foot|body|row/', $property) )
+        // {
+        //     // Set a row? Then add a row, otherwise set either 'head' or 'foot',
+        //     //  all by calling the respective methods
+        //     $property == 'row' && call_user_func(array($this, 'add_row'), $value) OR call_user_func(array($this, 'set_' . $property), $value);
+        // }
         // No "magic" method, so $property is assumed an attribute;
-        else
-        {
+        // else
+        // {
             $this->set($property, $value);
-        }
+        // }
     }
     
     
@@ -938,7 +991,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * 
      * @return  mixed   Returns the value of the property or null if it does not exist
      */
-    public function __get($property)
+    public function & __get($property)
     {
         return $this->get($property);
     }
@@ -950,7 +1003,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      * Magic __call method
      * 
      * Allows for getting and setting properties of the table via e.g.
-     *  $table->get_head(),
+     *  $table->get_header(),
      *    or
      *  $table->set_class('active')
      * 
@@ -966,12 +1019,17 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function __call($method, $args = array())
     {
+        // Allow magic 'get_***' and 'set_***'
         if ( false !== strpos($method, 'get_') OR false !== strpos($method, 'set_') )
         {
-            $property = str_replace(array('set_', 'get_'), '', $method);
+            // Get the property by extracting everything after the first underscore
+            $property = substr($method, 4);
+            // Get the method which is either 'set' or 'get'
             $method = substr($method, 0, 3);
+            // And unshift the arguments by the property
             array_unshift($args, $property);
             
+            // Call the respective set() or get() method
             return call_user_func_array(array($this, $method), $args);
         }
         
@@ -1010,7 +1068,7 @@ class Table implements Countable, Iterator, ArrayAccess {
      */
     public function count()
     {
-        $this->_body OR $this->add_body();
+        $this->add_body();
         
         return count($this->_body);
     }

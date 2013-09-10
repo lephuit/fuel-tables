@@ -10,11 +10,19 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
 abstract class Cell {
+    
+    /**
+     * Constants that define the cell-type
+     */
+    const BODY = 'Body';
+    const HEADER = 'Header';
+    const FOOTER = 'Footer';
+    
     
     /**
      * Keeps the html-attributes of the cell
@@ -32,12 +40,13 @@ abstract class Cell {
      */
     protected $_content = '';
     
-    const BODY = 'Body';
-    const HEAD = 'Head';
-    const FOOT = 'Foot';
-    
-    
-    protected $_sanitizers = array();
+    /**
+     * Keeps the sanitizer to be applied to the content on rendering
+     * 
+     * @access  protected
+     * @var     string
+     */
+    protected $_sanitizer = null;
     
     
     
@@ -54,7 +63,7 @@ abstract class Cell {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{cell_tag}>'
      */
-    public static function forge($type = Cell::BODY, $content, array $attributes = array())
+    public static function forge($type = Cell::BODY, $content = null, array $attributes = array())
     {
         $class = 'Table\\Cell_' . ucwords($type);
         
@@ -76,10 +85,18 @@ abstract class Cell {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{cell_tag}>'
      */
-    public function __construct($content, array $attributes = array())
+    public function __construct($content = null, array $attributes = array())
+    {
+        $content && $this->_content = $content;
+        $attributes && $this->_attributes = $attributes;
+    }
+    
+    
+    public function set_content($content = null)
     {
         $this->_content = $content;
-        $this->_attributes = $attributes;
+        
+        return $this;
     }
     
     
@@ -94,21 +111,19 @@ abstract class Cell {
      */
     public function render()
     {
-        // Prepare the content by sanitizing it or not
-        if ( $sanitizers = $this->get_sanitizers() )
-        {
-            foreach ( $sanitizers as $sanitizer )
-            {
-                $this->_content = Helpers::result($sanitizer, $this->_content);
-            }
-        }
-        
-        $this->_content OR $this->_content = '';
+        $content = (
+            $this->_content
+                ? ( $this->_sanitizer
+                    ? Helpers::result($sanitizer, $this->_content)
+                    : $this->_content
+                )
+                : ''
+        );
         
         return html_tag(
             $this->_cell_tag,
             $this->_attributes,
-            $this->_content
+            $content
         );
     }
     
@@ -171,19 +186,8 @@ abstract class Cell {
      */
     public function get($property, $default = null)
     {
-        // Match magic properties starting with 'cell'
-        if ( 0 === strpos('cell', $property) )
-        {
-            // Get the offset. Either $property was 'cell_N' and we want 'N' or it
-            //  was 'cell' and then we will use $default as the offset
-            $offset = ( false !== strpos('cell_', $property) ? substr($property, 4) : ( $default ? : count($this->_cells) - 1 ) );
-            
-            // Use ArrayAccess to return
-            return $this[$offset];
-        }
-        
-        // Assume an attribute, so return that one (if found, otherwise $default)
-        return array_key_exists($property, $this->_attributes) ? $this->_attributes[$property] : $default;
+        // Attribute to get, so return that one (if found, otherwise $default)
+        return \Arr::get($this->_attributes, $property, $default);
     }
     
     
@@ -265,25 +269,9 @@ abstract class Cell {
      * 
      * @return  \Table\Cell
      */
-    public function sanitize($callback = 'Security::htmlentities', $mode = 0)
+    public function sanitize($callback = 'Security::htmlentities')
     {
-        // Allow different modes of adding sanitizers
-        switch ( $mode )
-        {
-            // By default the callback given will be the only one (except if it's
-            //  set to false, in which case it will unset the callbacks)
-            default:
-                $this->_sanitizers = $callback === false ? array() : array($callback === true ? 'Security::htmlentities' : $callback);
-            break;
-            // Append
-            case 1:
-                array_push($this->_sanitizers, $callback);
-            break;
-            // Prepend
-            case -1:
-                array_unshift($this->_sanitizers, $callback);
-            break;
-        }
+        $this->_sanitizer = $callback;
         
         // For chaining
         return $this;
@@ -300,9 +288,9 @@ abstract class Cell {
      * @return  boolean     Returns true if there are registered sanitizers, otherwise
      *                      false
      */
-    public function has_sanitizers()
+    public function has_sanitizer()
     {
-        return isset($this->_sanitizers);
+        return isset($this->_sanitizer);
     }
     
     
@@ -315,9 +303,9 @@ abstract class Cell {
      * 
      * @return  mixed   Returns an array of sanitizers or false if there are none
      */
-    public function get_sanitizers()
+    public function get_sanitizer()
     {
-        return $this->has_sanitizers() ? $this->_sanitizers : false;
+        return $this->has_sanitizer() ? $this->_sanitizer : false;
     }
     
     

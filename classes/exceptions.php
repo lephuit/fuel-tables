@@ -10,7 +10,7 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 

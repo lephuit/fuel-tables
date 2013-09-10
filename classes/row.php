@@ -10,7 +10,7 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
@@ -19,6 +19,49 @@ use Countable;
 use Iterator;
 
 class Row implements ArrayAccess, Countable, Iterator {
+    
+    
+    const BODY   = 'Body';
+    const FOOTER = 'Footer';
+    const HEADER = 'Header';
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Create a new table-row with the given attributes
+     * 
+     * @access  public
+     * 
+     * @param   array   $attributes     Array of attributes to set for the
+     *                                  wrapping '<t{row_tag}>'
+     */
+    public static function forge(array $values = array(), array $attributes = array(), $type = Row::BODY)
+    {
+        return new static($values, $attributes, $type);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Forge a new cell-instance
+     * 
+     * @access  public
+     * @static
+     * 
+     * @param   array   $attributes     The attributes to put inside the cell's
+     *                                  opening tag
+     * 
+     * @return  \Table\Cell
+     */
+    public static function new_cell(array $attributes = array())
+    {
+        return Cell::forge($this->_type, null, $attributes);
+    }
+    
+    
+    
+    
     
     /**
      * Keeps the html-attributes of the row
@@ -37,6 +80,14 @@ class Row implements ArrayAccess, Countable, Iterator {
     protected $_cells = array();
     
     /**
+     * Keeps a reference to the current cell
+     * 
+     * @access  protected
+     * @var     \Table\Cell
+     */
+    protected $_cell = null;
+    
+    /**
      * For ArrayAccess
      * 
      * @access  protected
@@ -45,7 +96,7 @@ class Row implements ArrayAccess, Countable, Iterator {
     protected $_curr_cell = 0;
     
     /**
-     * Keeps the type of the row (head, foot, or body)
+     * Keeps the type of the row (header, footer, or body)
      * 
      * @access  protected
      * @var     string
@@ -69,26 +120,7 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{row_tag}>'
      */
-    public static function forge($type, array $values = array(), array $attributes = array())
-    {
-        return new static($type, $values, $attributes);
-    }
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Create a new table-row with the given attributes
-     * 
-     * @access  public
-     * 
-     * @param   array   $attributes     Array of attributes to set for the
-     *                                  wrapping '<t{row_tag}>'
-     */
-    public function __construct($type, array $values = array(), array $attributes = array())
+    public function __construct(array $values = array(), array $attributes = array(), $type = Row::BODY)
     {
         $this->_type        = $type;
         $this->_attributes  = $attributes;
@@ -266,17 +298,6 @@ class Row implements ArrayAccess, Countable, Iterator {
      */
     public function get($property, $default = null)
     {
-        // Match magic properties starting with 'cell'
-        if ( preg_match('/^cell/', $property) )
-        {
-            // Get the offset. Either $property was 'cell_N' and we want 'N' or it
-            //  was 'cell' and then we will use $default as the offset
-            $offset = ( false !== strpos('cell_', $property) ? substr($property, 4) : ( $default ? : count($this->_cells) - 1 ) );
-            
-            // Use ArrayAccess to return
-            return $this[$offset];
-        }
-        
         // Assume an attribute, so return that one (if found, otherwise $default)
         return array_key_exists($property, $this->_attributes) ? $this->_attributes[$property] : $default;
     }
@@ -316,13 +337,13 @@ class Row implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Row
      */
-    public function add_cell($value, array $attributes = array())
+    public function add_cell($content, array $attributes = array())
     {
         $class = 'Table\\Cell_' . $this->_type;
         
-        $cell = ( $value instanceof $class ? $value : Cell::forge($this->_type, $value, $attributes) );
+        $cell = ( $content instanceof $class ? $content : static::new_cell($attributes)->set_content($content) );
         
-        $this->_cells[] =& $cell;
+        $this->_cell = $this->_cells[] = $cell;
         
         return $this;
     }
@@ -337,7 +358,7 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @see     \Table\Cell
      * 
      * @param   array   $values     An array of values or an array of
-     *                              value => attributes.
+     *                              content => attributes.
      * 
      * @return   \Table\Row
      */
@@ -348,15 +369,15 @@ class Row implements ArrayAccess, Countable, Iterator {
             return $this;
         }
         
-        foreach ( $values as $value => $attributes )
+        foreach ( $values as $content => $attributes )
         {
             if ( ! is_array($attributes) )
             {
-                $value = $attributes;
+                $content = $attributes;
                 $attributes = array();
             }
             
-            $this->add_cell($value, $attributes);
+            $this->add_cell($content, $attributes);
         }
         
         return $this;
@@ -401,14 +422,14 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @param   string  $value      The value of the attribute to remove. If omitted
      *                              it will empty or unset the attribute.
      *                              Defaults to null
-     * @param   boolean $purge      Whether to remove empty-value keys from the
-     *                              attributes array
+     * @param   boolean $allow_empty    Whether to allow an empty value for the
+     *                                  given property
      * 
      * @return  \Table\Row
      */
-    public function remove($attribute, $value = null, $purge = false)
+    public function remove($attribute, $value = null, $allow_empty = false)
     {
-        Helpers::remove_attribute($this->_attributes, $attribute, $value, $purge);
+        Helpers::remove_attribute($this->_attributes, $attribute, $value, $allow_empty);
         
         return $this;
     }
@@ -425,10 +446,10 @@ class Row implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Row
      */
-    public function clear($attribute)
-    {
-        return $this->remove($attribute, null, true);
-    }
+    // public function clear($attribute)
+    // {
+    //     return $this->remove($attribute, null, true);
+    // }
     
     
     //--------------------------------------------------------------------------

@@ -10,7 +10,7 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
@@ -112,27 +112,28 @@ class Helpers {
      * 
      * @return  void
      */
-    public static function remove_attribute(array &$array, $key, $value = null, $purge = false)
+    public static function remove_attribute(array &$array, $key, $value = null, $allow_empty = false)
     {
         // Allow multiple values to add
         $value = (array) $value;
         
-        // $key not yet in $array?
+        // $key not in $array?
         if ( ! isset($array[$key]) )
         {
             // That's easy, return $array
             return;
         }
+        
         // Otherwise, if no value is given we will empty or purge the target array
-        elseif ( ! $value )
+        if ( ! $value )
         {
-            if ( $purge )
+            if ( $allow_empty === true )
             {
-                unset($array[$key]);
+                $array[$key] = '';
             }
             else
             {
-                $array[$key] = '';
+                unset($array[$key]);
             }
             
             return;

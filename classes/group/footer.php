@@ -14,8 +14,8 @@
  * @link        http://hubspace.github.io/fuel-tables
  */
 
-class Group_Body extends Group {
+class Group_Footer extends Group {
     
-    protected $_group_tag = 'tbody';
-    
+    protected $_group_tag = 'tfoot';
+        
 }

@@ -10,7 +10,7 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
@@ -55,8 +55,8 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     protected $_curr_row = 0;
     
     const BODY = 'Body';
-    const FOOT = 'Foot';
-    const HEAD = 'Head';
+    const FOOTER = 'Footer';
+    const HEADER = 'Header';
     
     
     
@@ -81,7 +81,29 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     }
     
     
+    //--------------------------------------------------------------------------
     
+    /**
+     * Forge a new row-instance
+     * 
+     * @access  public
+     * @static
+     * 
+     * @param   array   $attributes     The attributes to put inside the row's
+     *                                  opening tag
+     * 
+     * @return  \Table\Cell
+     */
+    public static function new_row(array $attributes = array())
+    {
+        return new Row(str_replace(__CLASS__ .'_', '', get_called_class()), array(), $attributes);
+    }
+    
+    
+    
+    
+    
+    protected $_row = null;
     
     
     //--------------------------------------------------------------------------
@@ -250,9 +272,13 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Row          Returns the just created row-object
      */
-    public function add_row(array $values = array(), array $attributes = array())
+    public function & add_row(array $values = array(), array $attributes = array())
     {
-        return $this->_rows[] = new Row(str_replace(__CLASS__ . '_', '', get_called_class()), $values, $attributes);
+        $row = ( $values instanceof \Table\Row ? $values : static::new_row($attributes)->add_cells($values) );
+        
+        $this->_rows[] = $this->_row = $row;
+        
+        return $this;
     }
     
     
@@ -269,9 +295,9 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return   \Table\Row
      */
-    public function add_cell($value = '', array $attributes = array())
+    public function & add_cell($value = '', array $attributes = array())
     {
-        $row = $this->_rows ? end($this->_rows) : $this->add_row();
+        $row = $this->_row ? : $this->add_row();
         
         return $row->add_cell($value, $attributes);
     }

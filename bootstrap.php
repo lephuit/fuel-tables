@@ -10,7 +10,7 @@
  * @author      Fuel Development Team
  * @license     MIT License
  * @copyright   2013 Gasoline Development Team
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
@@ -19,19 +19,19 @@ Autoloader::add_classes(array(
     'Table\\Table' => __DIR__ . '/classes/table.php',
     
     // Table Groups
-    'Table\\Group' => __DIR__ . '/classes/group.php',
-    'Table\\Group_Body' => __DIR__ . '/classes/group/body.php',
-    'Table\\Group_Head' => __DIR__ . '/classes/group/head.php',
-    'Table\\Group_Foot' => __DIR__ . '/classes/group/foot.php',
+    'Table\\Group'          => __DIR__ . '/classes/group.php',
+    'Table\\Group_Body'     => __DIR__ . '/classes/group/body.php',
+    'Table\\Group_Header'   => __DIR__ . '/classes/group/header.php',
+    'Table\\Group_Footer'   => __DIR__ . '/classes/group/footer.php',
     
     // Table Row
     'Table\\Row' => __DIR__ . '/classes/row.php',
     
     // Table Cells
-    'Table\\Cell' => __DIR__ . '/classes/cell.php',
-    'Table\\Cell_Body' => __DIR__ . '/classes/cell/body.php',
-    'Table\\Cell_Head' => __DIR__ . '/classes/cell/head.php',
-    'Table\\Cell_Foot' => __DIR__ . '/classes/cell/foot.php',
+    'Table\\Cell'           => __DIR__ . '/classes/cell.php',
+    'Table\\Cell_Body'      => __DIR__ . '/classes/cell/body.php',
+    'Table\\Cell_Header'    => __DIR__ . '/classes/cell/header.php',
+    'Table\\Cell_Footer'    => __DIR__ . '/classes/cell/footer.php',
     
     // Helpers
     'Table\\Helpers' => __DIR__ . '/classes/helpers.php',
