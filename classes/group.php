@@ -21,6 +21,58 @@ use Iterator;
 abstract class Group implements ArrayAccess, Countable, Iterator {
     
     /**
+     * Supported types of groups
+     */
+    const BODY = 'Body';
+    const FOOTER = 'Footer';
+    const HEADER = 'Header';
+    
+    
+    
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Forge a new table-group with the given attributes
+     * 
+     * @access  public
+     * 
+     * @param   array   $columns        An array of columns to use
+     * @param   array   $attributes     Array of attributes to set for the
+     *                                  wrapping '<t{group_tag}>'
+     */
+    public static function forge(array $attributes = array(), $type = Group::BODY)
+    {
+        $class = 'Table\\Group_' . ucwords($type);
+        
+        return new $class($attributes, $type);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Forge a new row-instance
+     * 
+     * @access  public
+     * @static
+     * 
+     * @param   array   $attributes     The attributes to put inside the row's
+     *                                  opening tag
+     * 
+     * @return  \Table\Cell
+     */
+    public static function new_row(array $attributes = array(), $type = Row::BODY)
+    {
+        return Row::forge($attributes, $type);
+    }
+    
+    
+    
+    
+    
+    /**
      * Keeps the group's tag like e.g., 'thead', 'tbody', or 'tfoot'
      * 
      * Must be implemented by the respective group itself
@@ -47,63 +99,14 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     protected $_rows = array();
     
     /**
-     * For ArrayAccess
+     * Keeps the current row
      * 
      * @access  protected
-     * @var     integer
+     * 
+     * @var     \Table\Row
      */
-    protected $_curr_row = 0;
-    
-    const BODY = 'Body';
-    const FOOTER = 'Footer';
-    const HEADER = 'Header';
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Forge a new table-group with the given attributes
-     * 
-     * @access  public
-     * 
-     * @param   array   $columns        An array of columns to use
-     * @param   array   $attributes     Array of attributes to set for the
-     *                                  wrapping '<t{group_tag}>'
-     */
-    public static function forge(array $columns = array(), array $attributes = array(), $type = Group::BODY)
-    {
-        $class = 'Table\\Group_' . ucwords($type);
-        
-        return new $class($columns, $attributes);
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Forge a new row-instance
-     * 
-     * @access  public
-     * @static
-     * 
-     * @param   array   $attributes     The attributes to put inside the row's
-     *                                  opening tag
-     * 
-     * @return  \Table\Cell
-     */
-    public static function new_row(array $attributes = array(), $type = Group::BODY)
-    {
-        return new Row(array(), $attributes, $type);
-    }
-    
-    
-    
-    
-    
     protected $_row = null;
+    
     
     
     //--------------------------------------------------------------------------
@@ -117,11 +120,10 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{group_tag}>'
      */
-    public function __construct(array $columns = array(), array $attributes = array())
+    public function __construct(array $attributes = array(), $type)
     {
-        $this->_attributes = $attributes;
-        
-        $columns && $this->add_cells($columns);
+        $this->_attributes  = $attributes;
+        $this->_type        = $type;
     }
     
     
@@ -217,23 +219,13 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function get($property, $default = null)
     {
-        // Match magic properties starting with 'row'
-        if ( 0 === strpos('row', $property) )
-        {
-            // Get the offset. Either $property was 'row_N' and we want 'N' or it
-            //  was 'row' and then we will use $default as the offset
-            $offset = ( false !== strpos('row_', $property) ? substr($property, 4) : ( $default ? : count($this->_rows) - 1 ) );
-            
-            // Use ArrayAccess to return
-            return $this[$offset];
-        }
-        elseif ( $property === 'attributes' )
+        if ( $property === 'attributes' )
         {
             return $this->_attributes;
         }
         
         // Assume an attribute, so return that one (if found, otherwise $default)
-        return array_key_exists($property, $this->_attributes) ? $this->_attributes[$property] : $default;
+        return \Arr::get($this->_attributes, $property, $default);
     }
     
     
@@ -274,9 +266,10 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function & add_row(array $values = array(), array $attributes = array())
     {
-        $row = ( $values instanceof \Table\Row ? $values : static::new_row(array(), $attributes, str_replace('Table\\Group_', '', get_called_class()))->add_cells($values) );
+        $row = ( $values instanceof Row ? $values : static::new_row(array(), $attributes, str_replace('Table\\Group_', '', get_called_class()))->add_cells($values) );
         
-        $this->_rows[] = $this->_row = $row;
+        $this->_rows[]  =& $row;
+        $this->_row     =& $row;
         
         return $row;
     }
@@ -423,15 +416,17 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
         return $this->get($property);
     }
     
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * [__call description]
+     * @param  [type] $method [description]
+     * @param  array  $args   [description]
+     * @return [type]         [description]
+     */
     public function __call($method, $args = array())
     {
-        if ( preg_match('/^s|get/', $method, $match) )
-        {
-            array_unshift($args, preg_replace('/^s|get_/', '', $method));
-            
-            return call_user_func_array(array($this, $match == 'set' ? 'set' : 'get'), $args);
-        }
-        
         // Throw an exception
         throw new BadMethodCallException('Call to undefined method ' . get_called_class() . '::' . $method . '()');
     }
@@ -460,6 +455,15 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     /**
      * Iterator Interface
      */
+    
+    /**
+     * For Iterator Interface
+     * 
+     * @access  protected
+     * @var     integer
+     */
+    protected $_curr_row = 0;
+    
     
     public function current()
     {

@@ -124,9 +124,6 @@ class Row implements ArrayAccess, Countable, Iterator {
     {
         $this->_type        = str_replace('Table\\Row_', '', get_called_class());
         $this->_attributes  = $attributes;
-        \Debug::dump(get_called_class());
-        \Debug::dump($this->_type);
-        die();
         
         $values && $this->add_cells($values);
     }
@@ -342,13 +339,7 @@ class Row implements ArrayAccess, Countable, Iterator {
      */
     public function add_cell($content, array $attributes = array())
     {
-        $class = 'Table\\Cell';
-        
-        // \Debug::dump($content instanceof $class);
-        // is_object($content) && \Debug::dump(get_class($content));
-        // is_object($content) && \Debug::dump($class);
-        
-        $cell = ( $content instanceof Table\Cell ? $content : static::new_cell($attributes)->set_content($content) );
+        $cell = ( $content instanceof Cell ? $content : static::new_cell($attributes)->set_content($content) );
         
         $this->_cell = $this->_cells[] = $cell;
         
