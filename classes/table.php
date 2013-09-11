@@ -181,7 +181,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      * @access  protected
      * @var     array
      */
-    // protected $_columns = array();
+    protected $_columns = array();
     
     /**
      * Configuration for the table-instance
@@ -321,27 +321,27 @@ class Table implements ArrayAccess, Countable, Iterator {
         );
         
         // Loop over the given columns to add them
-        foreach ( $columns as $identifier => $heading )
+        foreach ( $columns as $identifier => $options )
         {
             // Got an array for the options?
-            if ( is_array($heading) )
+            if ( is_array($options) )
             {
                 // Does it contain any of the keys from $defaults? Then 
                 // array_diff_assoc($defaults, $options) && $options = array('attributes' => $options);
                 // Merge the given options with the defaults
-                $heading = \Arr::merge($defaults, $heading);
+                $options = \Arr::merge($defaults, $options);
                 
                 // What key to use to put inside the cells?
-                $options['use'] OR $options['use'] = $column && $column = null;
+                $options['use'] OR ( $options['use'] = $identifier && $identifier = null );
                 
                 // What to display in the table header?
-                $options['as'] && $column = \Lang::get($options['as'], array(), $options['as']);
+                $options['as'] && $identifier = \Lang::get($options['as'], array(), $options['as']);
             }
-            // $options is no array so we assume $column to be the identifier and $options
+            // $options is no array so we assume $identifier to be the identifier and $options
             //  to be the value to display
             else
             {
-                $column = $options;
+                $identifier = $options;
                 $options = $defaults;
             }
             
@@ -349,13 +349,13 @@ class Table implements ArrayAccess, Countable, Iterator {
             //  we can chain to sanitize() as well
             $this->_header->add_cell(
                 Cell::forge(
-                    Cell::HEADER,
-                    $column,
-                    $options['attributes']
+                    $identifier,
+                    \Arr::get($options, 'attributes', array()),
+                    Cell::HEADER
                 )#->sanitize($options['sanitize'])
             );
             
-            unset($options['attributes']);
+            \Arr::delete($options, 'attributes');
             
             $this->_columns[] = $options;
         }
@@ -408,7 +408,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      */
     public function add_header(array $columns = array(), array $attributes = array())
     {
-        $this->_header OR $this->_header = Group::forge(Group::HEADER, $columns, $attributes);
+        $this->_header OR $this->_header = Group::forge($columns, $attributes, Group::HEADER);
         
         return $this;
     }
@@ -480,7 +480,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      */
     public function add_body(array $attributes = array())
     {
-        $this->_body OR $this->_body = Group::forge(Group::BODY, array(), $attributes);
+        $this->_body OR $this->_body = Group::forge(array(), $attributes, Group::BODY);
         
         return $this;
     }
@@ -567,6 +567,11 @@ class Table implements ArrayAccess, Countable, Iterator {
      */
     public function hydrate(array $data = array())
     {
+        if ( ! $data )
+        {
+            return $this;
+        }
+        
         // We don't want duplicate data inside the body, so assign a new body
         //  but keep the old attributes (if there's an old body)
         $body_attributes = ( $this->_body ? $this->_body->get('attributes') : array() );
@@ -990,7 +995,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      * 
      * @return  mixed   Returns the value of the property or null if it does not exist
      */
-    public function & __get($property)
+    public function __get($property)
     {
         return $this->get($property);
     }

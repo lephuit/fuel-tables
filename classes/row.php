@@ -54,9 +54,9 @@ class Row implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Cell
      */
-    public static function new_cell(array $attributes = array())
+    public static function new_cell(array $attributes = array(), $type = Cell::BODY)
     {
-        return Cell::forge($this->_type, null, $attributes);
+        return Cell::forge(array(), $attributes, $type);
     }
     
     
@@ -120,10 +120,13 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{row_tag}>'
      */
-    public function __construct(array $values = array(), array $attributes = array(), $type = Row::BODY)
+    public function __construct(array $values = array(), array $attributes = array())
     {
-        $this->_type        = $type;
+        $this->_type        = str_replace('Table\\Row_', '', get_called_class());
         $this->_attributes  = $attributes;
+        \Debug::dump(get_called_class());
+        \Debug::dump($this->_type);
+        die();
         
         $values && $this->add_cells($values);
     }
@@ -339,9 +342,13 @@ class Row implements ArrayAccess, Countable, Iterator {
      */
     public function add_cell($content, array $attributes = array())
     {
-        $class = 'Table\\Cell_' . $this->_type;
+        $class = 'Table\\Cell';
         
-        $cell = ( $content instanceof $class ? $content : static::new_cell($attributes)->set_content($content) );
+        // \Debug::dump($content instanceof $class);
+        // is_object($content) && \Debug::dump(get_class($content));
+        // is_object($content) && \Debug::dump($class);
+        
+        $cell = ( $content instanceof Table\Cell ? $content : static::new_cell($attributes)->set_content($content) );
         
         $this->_cell = $this->_cells[] = $cell;
         

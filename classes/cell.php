@@ -63,7 +63,7 @@ abstract class Cell {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{cell_tag}>'
      */
-    public static function forge($type = Cell::BODY, $content = null, array $attributes = array())
+    public static function forge($content = null, array $attributes = array(), $type = Cell::BODY)
     {
         $class = 'Table\\Cell_' . ucwords($type);
         

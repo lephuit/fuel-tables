@@ -73,7 +73,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{group_tag}>'
      */
-    public static function forge($type = Group::BODY, array $columns = array(), array $attributes = array())
+    public static function forge(array $columns = array(), array $attributes = array(), $type = Group::BODY)
     {
         $class = 'Table\\Group_' . ucwords($type);
         
@@ -94,9 +94,9 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Cell
      */
-    public static function new_row(array $attributes = array())
+    public static function new_row(array $attributes = array(), $type = Group::BODY)
     {
-        return new Row(str_replace(__CLASS__ .'_', '', get_called_class()), array(), $attributes);
+        return new Row(array(), $attributes, $type);
     }
     
     
@@ -274,11 +274,11 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function & add_row(array $values = array(), array $attributes = array())
     {
-        $row = ( $values instanceof \Table\Row ? $values : static::new_row($attributes)->add_cells($values) );
+        $row = ( $values instanceof \Table\Row ? $values : static::new_row(array(), $attributes, str_replace('Table\\Group_', '', get_called_class()))->add_cells($values) );
         
         $this->_rows[] = $this->_row = $row;
         
-        return $this;
+        return $row;
     }
     
     
@@ -299,7 +299,9 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     {
         $row = $this->_row ? : $this->add_row();
         
-        return $row->add_cell($value, $attributes);
+        $cell = $row->add_cell($value, $attributes);
+        
+        return $cell;
     }
     
     
