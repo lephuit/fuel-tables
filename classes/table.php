@@ -493,7 +493,7 @@ class Table implements ArrayAccess, Countable, Iterator {
             
             $header = ( $this->_header ? $this->_header->render() . PHP_EOL : '' );
             
-            $footer = ( $this->_footer ? $this->_foot->render() . PHP_EOL : '' );
+            $footer = ( $this->_footer ? $this->_footer->render() . PHP_EOL : '' );
             
             $body = ( $this->_body ? $this->_body->render() . PHP_EOL : '' );
             
