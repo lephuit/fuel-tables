@@ -92,11 +92,37 @@ abstract class Cell {
     }
     
     
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Set the content of the cell by the given value
+     * 
+     * @access  public
+     * 
+     * @param   mixed   $content    The content to set
+     * 
+     * @return  \Table\Cell
+     */
     public function set_content($content = null)
     {
         $this->_content = $content;
         
         return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * Get the content of the cell
+     * 
+     * @access  public
+     * 
+     * @return  mixed   Content of the cell
+     */
+    public function get_content()
+    {
+        return $this->_content;
     }
     
     
