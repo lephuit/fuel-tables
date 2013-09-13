@@ -54,9 +54,9 @@ class Row implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Cell
      */
-    public static function new_cell(array $attributes = array(), $type = Cell::BODY)
+    public static function new_cell(array $attributes = array())
     {
-        return Cell::forge(array(), $attributes, $type);
+        return Cell::forge($this->_type, null, $attributes);
     }
     
     
@@ -88,14 +88,6 @@ class Row implements ArrayAccess, Countable, Iterator {
     protected $_cell = null;
     
     /**
-     * For ArrayAccess
-     * 
-     * @access  protected
-     * @var     integer
-     */
-    protected $_curr_cell = 0;
-    
-    /**
      * Keeps the type of the row (header, footer, or body)
      * 
      * @access  protected
@@ -120,9 +112,9 @@ class Row implements ArrayAccess, Countable, Iterator {
      * @param   array   $attributes     Array of attributes to set for the
      *                                  wrapping '<t{row_tag}>'
      */
-    public function __construct(array $values = array(), array $attributes = array())
+    public function __construct(array $values = array(), array $attributes = array(), $type = Row::BODY)
     {
-        $this->_type        = str_replace('Table\\Row_', '', get_called_class());
+        $this->_type        = $type;
         $this->_attributes  = $attributes;
         
         $values && $this->add_cells($values);
@@ -339,7 +331,9 @@ class Row implements ArrayAccess, Countable, Iterator {
      */
     public function add_cell($content, array $attributes = array())
     {
-        $cell = ( $content instanceof Cell ? $content : static::new_cell($attributes)->set_content($content) );
+        $class = 'Table\\Cell_' . $this->_type;
+        
+        $cell = ( $content instanceof $class ? $content : static::new_cell($attributes)->set_content($content) );
         
         $this->_cell = $this->_cells[] = $cell;
         
@@ -524,6 +518,14 @@ class Row implements ArrayAccess, Countable, Iterator {
     /**
      * Iterator Interface
      */
+    
+    /**
+     * For Iterator Interface
+     * 
+     * @access  protected
+     * @var     integer
+     */
+    protected $_curr_cell = 0;
     
     public function current()
     {
