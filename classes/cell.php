@@ -87,7 +87,7 @@ abstract class Cell {
      */
     public function __construct($content = null, array $attributes = array())
     {
-        $content && $this->_content = $content;
+        $content !== null && $this->_content = $content;
         $attributes && $this->_attributes = $attributes;
     }
     
@@ -114,7 +114,7 @@ abstract class Cell {
         $this->_content = Helpers::result($this->_content);
         
         $content = (
-            $this->_content
+            $this->_content !== null
                 ? ( $this->_sanitizer
                     ? Helpers::result($sanitizer, $this->_content)
                     : $this->_content
