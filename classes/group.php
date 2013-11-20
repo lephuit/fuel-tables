@@ -91,6 +91,14 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     protected $_attributes = array();
     
     /**
+     * Meta values to store
+     * 
+     * @access  protected
+     * @var     array
+     */
+    protected $_meta = array();
+    
+    /**
      * Keeps the rows added to the group
      * 
      * @access  protected
@@ -179,7 +187,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Group
      */
-    public function set($attribute, $value = null, $mode = false)
+    public function set_attribute($attribute, $value = null, $mode = false)
     {
         // Prepend?
         if ( $mode === -1 )
@@ -205,6 +213,21 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
     //--------------------------------------------------------------------------
     
     /**
+     * [set_meta description]
+     * @param [type] $meta  [description]
+     * @param [type] $value [description]
+     */
+    public function set_meta($meta, $value = null)
+    {
+        $this->_meta[$meta] = $value;
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
      * Get a property from the group. Either an attribute or a row
      * 
      * @param   string  $property   The property to get. Can be 'row' or 'row_N'
@@ -217,7 +240,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  mixed   Returns the value of $property, if a row then \Table\Row_{group_tag}
      */
-    public function get($property, $default = null)
+    public function get_attribute($property, $default = null)
     {
         if ( $property === 'attributes' )
         {
@@ -226,6 +249,25 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
         
         // Assume an attribute, so return that one (if found, otherwise $default)
         return \Arr::get($this->_attributes, $property, $default);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * [get_meta description]
+     * @param  [type] $meta    [description]
+     * @param  [type] $default [description]
+     * @return [type]          [description]
+     */
+    public function get_meta($meta = null, $default = null)
+    {
+        if ( is_null($meta) )
+        {
+            return $this->_meta;
+        }
+        
+        return \Arr::get($this->_meta, $meta, $default);
     }
     
     
@@ -244,9 +286,9 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Group
      */
-    public function add($attribute, $value, $prepend = false)
+    public function add_attribute($attribute, $value, $prepend = false)
     {
-        return $this->set($attribute, $value, $prepend === false ? 1 : -1);
+        return $this->set_attribute($attribute, $value, $prepend === false ? 1 : -1);
     }
     
     
@@ -397,7 +439,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function __set($attribute, $value = null)
     {
-        $this->set($attribute, $value);
+        $this->set_attribute($attribute, $value);
     }
     
     
@@ -413,7 +455,7 @@ abstract class Group implements ArrayAccess, Countable, Iterator {
      */
     public function __get($property)
     {
-        return $this->get($property);
+        return $this->get_attribute($property);
     }
     
     

@@ -194,7 +194,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      * @return  mixed               Returns the property that matched $default it
      *                              property was not found
      */
-    public function get($property, $default = null)
+    public function get_attribute($property, $default = null)
     {
         // Return the attribute requested
         return \Arr::get($this->_attributes, $property, $default);
@@ -216,7 +216,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Table        Returns the object for chaining
      */
-    public function set($property, $value = null, $append = false)
+    public function set_attribute($property, $value = null, $append = false)
     {
         // Allow setting all attributes at once
         if ( $property === 'attributes' )
@@ -255,7 +255,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      * 
      * @return  \Table\Table            Returns the table-object for chaining
      */
-    public function remove($property, $value = null)
+    public function remove_attribute($property, $value = null)
     {
         Helpers::remove_attribute($this->_attributes, $property, $value);
         
@@ -501,7 +501,7 @@ class Table implements ArrayAccess, Countable, Iterator {
         }
         catch ( \Exception $e )
         {
-            return $e->getMessage();
+            return $e->getMessage() . ' (' . $e->getFile() . '@' . $e->getLine() . ')';
         }
     }
     
@@ -526,7 +526,7 @@ class Table implements ArrayAccess, Countable, Iterator {
         
         // We don't want duplicate data inside the body, so assign a new body
         //  but keep the old attributes (if there's an old body)
-        $body_attributes = ( $this->_body ? $this->_body->get('attributes') : array() );
+        $body_attributes = ( $this->_body ? $this->_body->get_attribute('attributes') : array() );
         $body = $this->add_body($body_attributes);
         
         foreach ( $data as $_data )
@@ -580,7 +580,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      */
     public function __set($property, $value = null)
     {
-        $this->set($property, $value);
+        $this->set_attribute($property, $value);
     }
     
     
@@ -598,7 +598,7 @@ class Table implements ArrayAccess, Countable, Iterator {
      */
     public function __get($property)
     {
-        return $this->get($property);
+        return $this->get_attribute($property);
     }
     
     

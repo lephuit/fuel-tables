@@ -33,6 +33,14 @@ abstract class Cell {
     protected $_attributes = array();
     
     /**
+     * Meta values to store
+     * 
+     * @access  protected
+     * @var     array
+     */
+    protected $_meta = array();
+    
+    /**
      * Keeps the content of the cell
      * 
      * @access  protected
@@ -174,7 +182,7 @@ abstract class Cell {
      * 
      * @return  \Table\Cell
      */
-    public function set($attribute, $value = null, $mode = false)
+    public function set_attribute($attribute, $value = null, $mode = false)
     {
         // Prepend?
         if ( $mode === -1 )
@@ -200,6 +208,21 @@ abstract class Cell {
     //--------------------------------------------------------------------------
     
     /**
+     * [set_meta description]
+     * @param [type] $meta  [description]
+     * @param [type] $value [description]
+     */
+    public function set_meta($meta, $value = null)
+    {
+        $this->_meta[$meta] = $value;
+        
+        return $this;
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
      * Get a property from the cell. Either an attribute or a cell
      * 
      * @param   string  $property   The property to get. Can be 'cell' or 'cell_N'
@@ -212,10 +235,29 @@ abstract class Cell {
      * 
      * @return  mixed   Returns the value of $property, if a cell then \Table\Cell
      */
-    public function get($property, $default = null)
+    public function get_attribute($property, $default = null)
     {
         // Attribute to get, so return that one (if found, otherwise $default)
         return \Arr::get($this->_attributes, $property, $default);
+    }
+    
+    
+    //--------------------------------------------------------------------------
+    
+    /**
+     * [get_meta description]
+     * @param  [type] $meta    [description]
+     * @param  [type] $default [description]
+     * @return [type]          [description]
+     */
+    public function get_meta($meta = null, $default = null)
+    {
+        if ( is_null($meta) )
+        {
+            return $this->_meta;
+        }
+        
+        return \Arr::get($this->_meta, $meta, $default);
     }
     
     
@@ -234,9 +276,9 @@ abstract class Cell {
      * 
      * @return  \Table\Cell
      */
-    public function add($attribute, $value, $prepend = false)
+    public function add_attribute($attribute, $value, $prepend = false)
     {
-        return $this->set($attribute, $value, $prepend === false ? 1 : -1);
+        return $this->set_attribute($attribute, $value, $prepend === false ? 1 : -1);
     }
     
     
@@ -364,7 +406,7 @@ abstract class Cell {
      */
     public function __set($attribute, $value = null)
     {
-        $this->set($attribute, $value);
+        $this->set_attribute($attribute, $value);
     }
     
     
@@ -380,7 +422,7 @@ abstract class Cell {
      */
     public function __get($property)
     {
-        return $this->get($property);
+        return $this->get_attribute($property);
     }
     
 }
