@@ -1,6 +1,6 @@
 # Fuel-tables
 
-A FuelPHP package to handle tables (with themes)
+A FuelPHP package to handle tables
 
 
 ## Usage
@@ -13,31 +13,14 @@ A FuelPHP package to handle tables (with themes)
 /**
  * Simple
  */
-$table = \Table\Table::forge('my-table');
+$table = \Table\Table::forge();
 
 /**
  * Adding attributes to the outer <table>
  */
-$table = \Table\Table::forge(
-    'my-table',
-    array(
-        'class' => 'table table-hover'
-    )
-);
-
-/**
- * Adding attributes and columns on creating
- */
-$table = \Table\Table::forge(
-    'my-table',
-    array(
-        'class' => 'table table-hover'
-    ),
-    array(
-        'Name',
-        'Created At'
-    )
-);
+$table = \Table\Table::forge(array(
+    'class' => 'table table-hover'
+));
 
 ?>
 ~~~
@@ -46,12 +29,12 @@ Instead of ```\Table\Table::forge()```, you may also use ```new \Table\Table()``
 
 ~~~php
 <?php
-    function forge($name = 'default', array $attributes = array(), array $columns = array()) {}
+    function forge(array $attributes = array()) {}
 ?>
 ~~~
 
 
-### Accessing a previously defined table-instance
+### Accessing a previously defined table-instance or forging a new named table instance
 
 ~~~php
 <?php
@@ -68,17 +51,6 @@ $table = \Table\Table::instance('my-table');
 ~~~
 
 
-### Accessing the active table instance
-
-~~~php
-<?php
-
-$active_table = \Table\Table::active();
-
-?>
-~~~
-
-
 ### Setting attributes later
 
 ~~~php
@@ -88,14 +60,16 @@ $active_table = \Table\Table::active();
 $table->set_attribute('class', 'table table-bordered');
 
 // Appending to an attribute or setting it if it's not yet set
-$table->set_attribute('class', 'table-bordered', true);
+$table->add_attribute('class', 'table-bordered');
 
 ?>
 ~~~
 
 ~~~php
 <?php
-    function set_attribute($key, $value, $append = false) {}
+    function set_attribute($key, $value = null) {}
+    
+    public function add_attribute($attribute, $value = null, $prepend = false) {}
 ?>
 ~~~
 
@@ -106,17 +80,17 @@ $table->set_attribute('class', 'table-bordered', true);
 <?php
 
 // Completely clear the attribute 'class' (if it exists)
-$table->remove_attribute('class');
+$table->delete_attribute('class');
 
 // Clear just the 'table-bordered' part from the attribute 'class'
-$table->remove_attribute('class', 'table-bordered');
+$table->delete_attribute('class', 'table-bordered');
 
 ?>
 ~~~
 
 ~~~php
 <?php
-    function remove_attribute($attribute, $value = null) {}
+    function delete_attribute($attribute, $value = null, $allow_empty = false) {}
 ?>
 ~~~
 
@@ -129,20 +103,15 @@ Two ways of setting the table head. Either by adding a thead-group and adding th
 <?php
 
 // Create a thead group for the table
-$head = $table->add_head();
-// Or
-$head = $table->get_head();
+$head = \Table\Group::forge(array(), array(), \Table\Group::HEADER);
 
-// Add a row to the thead so it's not empty
-$row = $head->add_row();
-
-// Adding cells to the thead row
-$row = $row
+// Adding cells to the header
+$head = $head
     ->add_cell('Name')
     ->add_cell('Created At');
 
 // Adding attributes to the th
-$row = $row
+$head = $head
     ->add_cell(
         'Name',
         array(
@@ -151,40 +120,12 @@ $row = $row
     )
     ->add_cell('Created At');
 
-// Adding cells with identifiers to the thead row
-$row = $row
-    ->add_cell(
-        'Name',
-        'name'
-    )
-    ->add_cell(
-        'Created At',
-        'created_at'
-    );
-
-// Adding identifiers and attributes
-$row = $row
-    ->add_cell(
-        # Content to display inside th
-        'Name',
-        # Attributes
-        array(
-            'id' => 'name-th-head',
-        ),
-        # Identifier
-        'name'
-    )
-    ->add_cell(
-        'Created At',
-        'created_at'
-    );
-
 ?>
 ~~~
 
 ~~~php
 <?php
-    function \Table\Group\Head::add_cell($content, array $attributes = array(), $identifier = null);
+    function \Table\Group::add_cell($cell = '', array $attributes = array(), $sanitizer = null) {}
 ?>
 ~~~
 
@@ -195,39 +136,12 @@ Or, table headers can also be set using ```set_columns()``` on the table ```$tab
 /**
  * Setting the column names manually
  */
-$table->set_columns('Name', 'Created At');
-// Or
-$table->set_columns(array(
+$table->add_header(array(
     'Name',
     'Created At'
 ));
-
-/**
- * Setting column names with identifiers so the columns can be accessed per row
- * by the identifier later on.
- * 
- * As a matter of fact, the previous example above will result in the same ability
- * to access the columns by name except that it might be useful to have the columns
- * named by properties of the model(s) and the column headers to be set by the
- * localized name of the property
- */
-$table->set_columns(array(
-    'name'          => 'Name',
-    'created_at'    => 'Created At',
-));
-
-/**
- * Adding attributes inside the <th> for each column head
- */
-$table->set_columns(array(
-    'name'          => array(
-        'as'            => 'Name',
-        'attributes'    => array(
-            'id'    => 'name-th-head'
-        ),
-    ),
-    'created_at'    => 'Created At',
-));
+// Or (with $head from above)
+$table->set_header($head);
 
 ?>
 ~~~
@@ -238,17 +152,14 @@ $table->set_columns(array(
 ~~~php
 <?php
 
-/**
- * This will add a row to the table thus tbody. This is also the default behavior
- * when calling \Table\Table::add_row();
- */
-$body_row = $table->add_row();
+$table = \Table\Table::forge();
 
-// Add a row to thead/tfoo. Notice that there can be only one row inside either thead
-// and tfoot so whenever you call add_row() on the head it will overwrite the
-// previously added row (if there was any)
-$head_row = $table->get_head()->add_row();
-$foot_row = $table->get_foot()->add_row();
+// Either like this:
+$row = \Table\Row::forge();
+$table[] = $row;
+
+// Or like so
+$table[] = new \Table\Row();
 
 ?>
 ~~~
@@ -258,156 +169,51 @@ $foot_row = $table->get_foot()->add_row();
 ~~~php
 <?php
 
-$row = $table->add_row();
+$row = \Table\Row::forge();
 
-// By passing the content (and optionally attributes) to add_cell()
-$row = $row->add_cell(
-    'Content',
-    array(
-        'class' => 'odd-cell'
-    )
-);
+// Either like this:
+$cell = \Table\Cell::forge($content = '', array $attributes = array(), $sanitizer = null);
+$row[] = $cell;
 
-// By forging or constructing a new cell and passing it to add_cell()
-$cell = \Table\Body\Cell::forge(
-    'Content',
-    array(
-        'class' => 'odd-cell'
-    )
-);
-
-$row = $row->add_cell($cell);
+// Or like so
+$row[] = new \Table\Cell($content = '', array $attributes = array(), $sanitizer = null);
 
 ?>
 ~~~
 
 ### Sanitizing content of a cell
 
-This only works on cells of the tbody-group. Multiple sanitizers may be added by supplying an array as the third argument to add_cell(). But be careful: The sanitizers are applied in order of appearance in the array passed! This might result in unwanted output. By default, sanitizing is disabled for the cells
+This only works on cells of the tbody-group. A sanitizer may be added by supplying it as the third argument to the constructor. By default, sanitizing is disabled for the cells
 
 ~~~php
 <?php
 
-$row = $table->add_row();
+// Sanitizer can be supplied as a string
+$cell = \Table\Cell::forge('<a href="foo://bar">This will be sanitized</a>', array(), 'Security::htmlentities');
 
-// By passing the content (and optionally attributes) to add_cell()
-$row = $row->add_cell(
-    'Content',
-    array(
-        'class' => 'odd-cell'
-    ),
-    'Security::htmlentities'
+// Or any valid callback (closures, function-names, methods, ...)
+$cell = \Table\Cell::forge(
+    '<a href="foo://bar">This will be sanitized</a>',
+    array(),
+    function($content) {
+        return \Security::htmlentities($content);
+    }
 );
-
-// By forging or constructing a new cell and passing it to add_cell()
-$cell = \Table\Body\Cell::forge(
-    'Content',
-    array(
-        'class' => 'odd-cell'
-    ),
-    'Security::htmlentities'
-);
-
-/**
- * Or
- */
-$cell = \Table\Body\Cell::forge(
-    'Content',
-    array(
-        'class' => 'odd-cell'
-    )
-);
-
-// Add a sanitizer to the cell
-$cell = $cell->sanitize('Security::htmlentities');
-
-$row = $row->add_cell($cell);
 
 ?>
 ~~~
 
-### Accessing cells that match identifier
+### Accessing (Looping over) rows of the table
 
 ~~~php
 <?php
 
-// Get all cells that match the identifier 'created_at' definied as we set the
-// columns of the table. Note that the cells are returned by reference so you
-// need to handle them by reference in future calls
-$cells = $table->get_cells('created_at');
-
-// Now you can loop over the cells and do whatever you want with them
-foreach ( $cells as $row_no => &$cell )
+foreach ( $table->get_data() as $row )
 {
-    $cell = $cell
-        ->set_attribute('class' => ( $row_no % 2 == 0 ? 'even' : 'odd' ));
-        ->sanitize('Security::htmlentities');
-}
-
-?>
-~~~
-
-~~~php
-<?php
-
-/**
- * Table\Table
- */
-function &get_cells($identifier)
-{
-    return $this->_body->get_cells($identifier);
-}
-
-/**
- * \Table\Group\Body
- */
-function &get_cells($identifier)
-{
-    if ( ! $this->_rows )
+    foreach ( $row->get_data() as $cell )
     {
-        return false;
+        // Do something with the current cell
     }
-    
-    $cells = array();
-    
-    foreach ( $this->_rows as $row )
-    {
-        if ( $cell = $row->get_cells($identifier) )
-        {
-            $cells[] = $cell;
-        }
-    }
-    
-    return $cells;
-}
-
-/**
- * \Table\Row\Body
- */
-function &get_cells($identifier)
-{
-    if ( ! $this->_cells )
-    {
-        return false;
-    }
-    
-    foreach ( $this->_cells as $cell )
-    {
-        if ( $cell->identified_by($identifier) )
-        {
-            return $cell;
-        }
-    }
-    
-    return false;
-}
-
-/**
- * \Table\Cell\Body
- */
-function identified_by($identifier)
-{
-    return $this->_identifier = $identifier;
 }
 
 ?>

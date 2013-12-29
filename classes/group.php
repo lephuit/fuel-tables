@@ -1,573 +1,225 @@
 <?php namespace Table;
 
 /**
- * Part of the fuel-Table-package
+ * Part of the fuel-tables package
  *
- * @package     Table
+ * @package     fuel-tables
  * @namespace   Table
- * @version     0.1-dev
+ * @version     1.0-dev
  * @author      Gasoline Development Team
  * @author      Fuel Development Team
  * @license     MIT License
- * @copyright   2013 Gasoline Development Team
+ * @copyright   2013 -- 2014 Gasoline Development Team
  * @copyright   2010 - 2013 Fuel Development Team
  * @link        http://hubspace.github.io/fuel-tables
  */
 
-use ArrayAccess;
-use Countable;
-use Iterator;
-
-abstract class Group implements ArrayAccess, Countable, Iterator {
+class Group extends AttributeContainer {
     
     /**
-     * Supported types of groups
+     * 
      */
-    const BODY = 'Body';
-    const FOOTER = 'Footer';
-    const HEADER = 'Header';
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
+    const HEADER = 'HEADER';
     
     /**
-     * Forge a new table-group with the given attributes
      * 
-     * @access  public
-     * 
-     * @param   array   $columns        An array of columns to use
-     * @param   array   $attributes     Array of attributes to set for the
-     *                                  wrapping '<t{group_tag}>'
      */
-    public static function forge(array $attributes = array(), $type = Group::BODY)
+    const BODY = 'BODY';
+    
+    /**
+     * 
+     */
+    const FOOTER = 'FOOTER';
+    
+    
+    
+    
+    
+    /**
+     * [forge description]
+     * @param  array  $rows       [description]
+     * @param  array  $attributes [description]
+     * @param  [type] $type       [description]
+     * @return [type]             [description]
+     */
+    public static function forge(array $rows = array(), array $attributes = array(), $type = BODY)
     {
-        $class = 'Table\\Group_' . ucwords($type);
+        return new static($rows, $attributes, $type);
+    }
+    
+    
+    
+    
+    
+    /**
+     * [__construct description]
+     * @param array  $rows       [description]
+     * @param array  $attributes [description]
+     * @param [type] $type       [description]
+     */
+    public function __construct(array $rows = array(), array $attributes = array(), $type = BODY)
+    {
+        $this->set_type($type);
+        $attributes && $this->set_attributes($attributes);
         
-        return new $class($attributes, $type);
+        foreach ( $rows as $cells => $attributes )
+        {
+            if ( is_int($cells) and is_string($attributes) )
+            {
+                $cells      = $attributes;
+                $attributes = array();
+            }
+            
+            $this->add_row($cells, $attributes);
+        }
     }
     
     
-    //--------------------------------------------------------------------------
-    
     /**
-     * Forge a new row-instance
-     * 
-     * @access  public
-     * @static
-     * 
-     * @param   array   $attributes     The attributes to put inside the row's
-     *                                  opening tag
-     * 
-     * @return  \Table\Cell
+     * [add_row description]
+     * @param array $cells      [description]
+     * @param array $attributes [description]
      */
-    public static function new_row(array $attributes = array(), $type = Row::BODY)
+    public function add_row($cells = array(), array $attributes = array())
     {
-        return Row::forge($attributes, $type);
-    }
-    
-    
-    
-    
-    
-    /**
-     * Keeps the group's tag like e.g., 'thead', 'tbody', or 'tfoot'
-     * 
-     * Must be implemented by the respective group itself
-     * 
-     * @access  protected
-     * @var     string
-     */
-    // protected $_group_tag;
-    
-    /**
-     * Keeps the html-attributes of the group
-     * 
-     * @access  protected
-     * @var     array
-     */
-    protected $_attributes = array();
-    
-    /**
-     * Meta values to store
-     * 
-     * @access  protected
-     * @var     array
-     */
-    protected $_meta = array();
-    
-    /**
-     * Keeps the rows added to the group
-     * 
-     * @access  protected
-     * @var     array
-     */
-    protected $_rows = array();
-    
-    /**
-     * Keeps the current row
-     * 
-     * @access  protected
-     * 
-     * @var     \Table\Row
-     */
-    protected $_row = null;
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Create a new table-group with the given attributes
-     * 
-     * @access  public
-     * 
-     * @param   array   $columns        An array of columns to use
-     * @param   array   $attributes     Array of attributes to set for the
-     *                                  wrapping '<t{group_tag}>'
-     */
-    public function __construct(array $attributes = array(), $type)
-    {
-        $this->_attributes  = $attributes;
-        $this->_type        = $type;
-    }
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Renders the group's content
-     * 
-     * @access  public
-     * 
-     * @return  string  Returns the html-string of the table-group with rows
-     */
-    public function render()
-    {
-        return html_tag(
-            $this->_group_tag,
-            $this->_attributes,
-            ( $this->_rows
-                ? implode(
-                    PHP_EOL,
-                    array_map(
-                        function($row)
-                        {
-                            return $row->render();
-                        },
-                        $this->_rows
+        return $this->set(
+            null,
+            (
+                $cells instanceof \Table\Row
+                ?
+                    $cells
+                :
+                    \Table\Row::forge(
+                        $cells,
+                        $attributes
                     )
-                )
-                : ''
+                    ->set_type(
+                        $this->get_type()
+                    )
             )
         );
     }
     
     
-    //--------------------------------------------------------------------------
-    
     /**
-     * Set an attribute of the group
-     * 
-     * @access  public
-     * 
-     * @param   string      $attribute  The attr
-     * @param   string      $value      The value of the attribute to set
-     * @param   boolean     $mode       The mode of setting the attribute. If
-     *                                  omitted, $value will be set as the only
-     *                                  value for the attribute. If set to 1,
-     *                                  $value will be appended, if set to -1
-     *                                  it will be prepended.
-     *                                  Defaults to false i.e., overwrite
-     * 
-     * @return  \Table\Group
+     * [get_row description]
+     * @param  [type] $number [description]
+     * @return [type]         [description]
      */
-    public function set_attribute($attribute, $value = null, $mode = false)
+    public function get_row($number)
     {
-        // Prepend?
-        if ( $mode === -1 )
+        if ( $number == 'first' )
         {
-            Helpers::add_attribute($this->_attributes, $attribute, $value, true);
+            return reset($this->data);
         }
-        // Any other case we will append
-        elseif ( $mode === 1 )
+        elseif ( $number == 'last' )
         {
-            Helpers::add_attribute($this->_attributes, $attribute, $value, false);
+            return end($this->data);
         }
-        // Not adding, but setting i.e., replacing
-        else
+        elseif ( (int) $number === intval($number) )
         {
-            $this->_attributes[$attribute] = $value;
+            $number = $number--;
         }
         
-        // And a chainable return
-        return $this;
+        return $this->get($number);
     }
     
     
-    //--------------------------------------------------------------------------
-    
     /**
-     * [set_meta description]
-     * @param [type] $meta  [description]
-     * @param [type] $value [description]
+     * [add_cell description]
+     * @param string $cell       [description]
+     * @param array  $attributes [description]
+     * @param [type] $sanitizer  [description]
      */
-    public function set_meta($meta, $value = null)
+    public function add_cell($cell = '', array $attributes = array(), $sanitizer = null)
     {
-        $this->_meta[$meta] = $value;
-        
-        return $this;
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Get a property from the group. Either an attribute or a row
-     * 
-     * @param   string  $property   The property to get. Can be 'row' or 'row_N'
-     *                              to return the last or N-th row.  If it does not
-     *                              match, then $property is assumed an attribute
-     * @param   mixed   $default    The default value to return if no matching
-     *                              attribute was found. In case $property == 'row',
-     *                              $default can be used to indicate the number of
-     *                              the row to get
-     * 
-     * @return  mixed   Returns the value of $property, if a row then \Table\Row_{group_tag}
-     */
-    public function get_attribute($property, $default = null)
-    {
-        if ( $property === 'attributes' )
+        if ( ! $this->count_data() )
         {
-            return $this->_attributes;
+            $this->add_row();
         }
         
-        // Assume an attribute, so return that one (if found, otherwise $default)
-        return \Arr::get($this->_attributes, $property, $default);
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * [get_meta description]
-     * @param  [type] $meta    [description]
-     * @param  [type] $default [description]
-     * @return [type]          [description]
-     */
-    public function get_meta($meta = null, $default = null)
-    {
-        if ( is_null($meta) )
-        {
-            return $this->_meta;
-        }
-        
-        return \Arr::get($this->_meta, $meta, $default);
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Add an attribute to the array of attributes
-     * 
-     * @access  public
-     * 
-     * @param   string  $attribute  Name of the attribute to add e.g., 'class'
-     * @param   mixed   $value      The value to set for $attribute
-     * @param   boolean $prepend    Whether to prepend (false) or append (true)
-     *                              $value to the classes' attributes.
-     *                              Defaults to false
-     * 
-     * @return  \Table\Group
-     */
-    public function add_attribute($attribute, $value, $prepend = false)
-    {
-        return $this->set_attribute($attribute, $value, $prepend === false ? 1 : -1);
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Add a row to the current group
-     * 
-     * @access  public
-     * @see     \Table\Cell
-     * 
-     * @param   array   $values     Array of values to add into the cells of the
-     *                              row.
-     * @param   array   $attributes Attributes to add to the row-opening tag
-     * 
-     * @return  \Table\Row          Returns the just created row-object
-     */
-    public function & add_row(array $values = array(), array $attributes = array())
-    {
-        $row = ( $values instanceof Row ? $values : static::new_row(array(), $attributes, str_replace('Table\\Group_', '', get_called_class()))->add_cells($values) );
-        
-        $this->_rows[]  =& $row;
-        $this->_row     =& $row;
-        
-        return $row;
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Append a cell to the current row
-     * 
-     * @access  public
-     * @see     \Table\Cell
-     * 
-     * @param   string  $value      The value of the cell
-     * @param   array   $attributes Array of html-attributes of the cell
-     * 
-     * @return   \Table\Row
-     */
-    public function & add_cell($value = '', array $attributes = array())
-    {
-        $row = $this->_row ? : $this->add_row();
-        
-        $cell = $row->add_cell($value, $attributes);
-        
-        return $cell;
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Add multiple cells at once to the last row
-     * 
-     * @access  public
-     * @see     \Table\Cell
-     * 
-     * @param   array   $values     An array of values or an array of
-     *                              value => attributes.
-     * 
-     * @return   \Table\Group
-     */
-    public function add_cells(array $values = array())
-    {
-        if ( ! $values )
-        {
-            return $this;
-        }
-        
-        foreach ( $values as $value => $attributes )
-        {
-            if ( ! is_array($attributes) )
-            {
-                $value = $attributes;
-                $attributes = array();
-            }
-            
-            $this->add_cell($value, $attributes);
-        }
+        $this->get_row('last')
+            ->set(
+                null,
+                (
+                    $cell instanceof \Table\Cell
+                    ?
+                        $cell
+                    :
+                        \Table\Cell::forge(
+                            $cell,
+                            $attributes,
+                            $sanitizer
+                        )
+                        ->set_type(
+                            $this->get_type()
+                        )
+                )
+            );
         
         return $this;
     }
     
     
-    //--------------------------------------------------------------------------
+    /**
+     * [get_type description]
+     * @return [type] [description]
+     */
+    public function get_type()
+    {
+        return $this->get_meta('type');
+    }
+    
     
     /**
-     * Remove an attribute's value
-     * 
-     * @access  public
-     * 
-     * @param   string  $attribute  The attribute's name to remove
-     * @param   string  $value      The value of the attribute to remove
-     * 
-     * @return  \Table\Group
+     * [set_type description]
+     * @param [type] $type [description]
      */
-    public function remove($attribute, $value = null, $purge = false)
+    public function set_type($type)
     {
-        Helpers::remove_attribute($this->_attributes, $attribute, $value, $purge);
+        return $this->set_meta('type', $type);
+    }
+    
+    
+    /**
+     * [render description]
+     * @return [type] [description]
+     */
+    public function render()
+    {
+        $rows = array();
         
-        return $this;
+        foreach ( $this->get_data() as $row )
+        {
+            $rows[] = $row->render();
+        }
+        
+        return html_tag($this->translate_type(), $this->get_attributes(), implode(PHP_EOL, $rows));
     }
     
     
-    //--------------------------------------------------------------------------
-    
     /**
-     * Clear an attribute i.e., remove it completely
-     * 
-     * @access  public
-     * 
-     * @param   string  $attribute  The attribute's name to remove
-     * 
-     * @return  \Table\Group
+     * [translate_type description]
+     * @return [type] [description]
      */
-    public function clear($attribute)
+    protected function translate_type()
     {
-        return $this->remove($attribute, null, true);
+        $type = $this->get_type();
+        
+        return ( $type == Group::HEADER ? 'thead' : ( $type == GROUP::FOOTER ? 'tfoot' : 'tbody' ) );
     }
     
     
-    //--------------------------------------------------------------------------
-    
     /**
-     * Support echoing the group by using __toString as a wrapper for render()
-     * 
-     * @access  public
-     * 
-     * @return  string  Returns the html-string of the table-group with rows
+     * [__toString description]
+     * @return string [description]
      */
     public function __toString()
     {
         return $this->render();
     }
     
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Magic set to set attributes
-     * 
-     * @access  public
-     * 
-     * @param   string  $attribute  The attribute to set
-     * @param   string  $value      The value to set.  Defaults to null
-     */
-    public function __set($attribute, $value = null)
-    {
-        $this->set_attribute($attribute, $value);
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Magic get that does nothing but return the classes' get() result
-     * 
-     * @access  public
-     * @param   string  $property   The property to get
-     * 
-     * @return  mixed   Returns the value for $property, if not found null
-     */
-    public function __get($property)
-    {
-        return $this->get_attribute($property);
-    }
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * [__call description]
-     * @param  [type] $method [description]
-     * @param  array  $args   [description]
-     * @return [type]         [description]
-     */
-    public function __call($method, $args = array())
-    {
-        // Throw an exception
-        throw new BadMethodCallException('Call to undefined method ' . get_called_class() . '::' . $method . '()');
-    }
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Countable Interface
-     */
-    
-    public function count()
-    {
-        return count($this->_rows);
-    }
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * Iterator Interface
-     */
-    
-    /**
-     * For Iterator Interface
-     * 
-     * @access  protected
-     * @var     integer
-     */
-    protected $_curr_row = 0;
-    
-    
-    public function current()
-    {
-        return $this->_rows[$this->key()];
-    }
-    
-    public function rewind()
-    {
-        $this->_curr_row = 0;
-    }
-    
-    public function key()
-    {
-        return $this->_curr_row;
-    }
-    
-    public function next()
-    {
-        ++$this->_curr_row;
-    }
-    
-    public function valid()
-    {
-        return isset($this->_rows[$this->_curr_row]);
-    }
-    
-    
-    
-    
-    
-    //--------------------------------------------------------------------------
-    
-    /**
-     * ArrayAccess Interface
-     */
-    
-    public function offsetExists($offset)
-    {
-        return isset($this->_rows[$offset]);
-    }
-    
-    public function offsetGet($offset)
-    {
-        if ( ! $this->offsetExists($offset) )
-        {
-            throw new OutOfBoundsException('Access to undefined row-index [' . $offset . ']');
-        }
-        
-        return $this->_rows[$offset];
-    }
-    
-    public function offsetSet($offset, $value)
-    {
-        throw new ReadOnlyException('Cannot set row-index [' . $offset . '] as rows are read-only');
-    }
-    
-    public function offsetUnset($offset)
-    {
-        if ( $this->offsetExists($offset) )
-        {
-            unset($this->_rows[$offset]);
-        }
-    }
-    
 }
+
+/* End of file group.php */
+/* Location: ./fuel/packages/table/classes/group.php */
