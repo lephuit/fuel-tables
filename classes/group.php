@@ -64,7 +64,7 @@ class Group extends AttributeContainer {
         
         foreach ( $rows as $cells => $attributes )
         {
-            if ( is_int($cells) and is_string($attributes) )
+            if ( is_int($cells) && ( ! is_array($attributes) ) )
             {
                 $cells      = $attributes;
                 $attributes = array();

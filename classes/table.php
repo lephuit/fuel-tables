@@ -86,7 +86,7 @@ class Table extends AttributeContainer {
     {
         foreach ( $cells as $content => $attributes )
         {
-            if ( is_int($content) and is_string($attributes) )
+            if ( is_int($content) && ( ! is_array($attributes) ) )
             {
                 $content    = $attributes;
                 $attributes = array();
@@ -108,7 +108,7 @@ class Table extends AttributeContainer {
     {
         foreach ( $cells as $content => $attributes )
         {
-            if ( is_int($content) and is_string($attributes) )
+            if ( is_int($content) && ( ! is_array($attributes) ) )
             {
                 $content    = $attributes;
                 $attributes = array();
